@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="620" viewBox="0 0 1040 620" role="img" aria-labelledby="title desc">
+  <title id="title">Karmac: observed connection timings on AirPods Pro 3</title>
+  <desc id="desc">Two local Bluetooth-off cold-start samples took 15.493 seconds and 4.674 seconds to reach active playback and verified Windows output. An already-connected output verification took 211 milliseconds and is a different operation. Results are driver-dependent. There is no measured Windows baseline or audible-first-sound measurement.</desc>
+  <defs>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#198348"/><stop offset="1" stop-color="#52e58b"/></linearGradient>
+    <style>
+      text { font-family: 'Segoe UI', Arial, sans-serif; }
+      .white { fill: #f5f5f5; }
+      .muted { fill: #a3a3a3; }
+      .small { font-size: 15px; }
+    </style>
+  </defs>
+  <rect width="1040" height="620" rx="20" fill="#000"/>
+  <circle cx="45" cy="43" r="4" fill="#52e58b"/>
+  <text x="60" y="49" fill="#b6b6b6" font-size="14" letter-spacing="1.8">MEASURED ON ONE WINDOWS LAPTOP</text>
+  <text x="40" y="105" class="white" font-size="34" font-weight="600">From Bluetooth off to ready</text>
+  <text x="40" y="138" class="muted" font-size="17">Radio enabled, saved pair verified, playback active, Windows output verified.</text>
+
+  <text x="40" y="196" class="white" font-size="17" font-weight="600">Cold start</text>
+  <text x="1000" y="196" text-anchor="end" class="muted small">Two observed runs · same scale</text>
+
+  <text x="40" y="242" class="muted" font-size="17">Run 01</text>
+  <rect x="145" y="225" width="675" height="20" rx="10" fill="#171717"/>
+  <rect x="145" y="225" width="675" height="20" rx="10" fill="url(#bar)"/>
+  <text x="1000" y="245" text-anchor="end" class="white" font-size="28" font-weight="600">15.493 s</text>
+
+  <text x="40" y="300" class="muted" font-size="17">Run 02</text>
+  <rect x="145" y="283" width="675" height="20" rx="10" fill="#171717"/>
+  <rect x="145" y="283" width="203.635" height="20" rx="10" fill="url(#bar)"/>
+  <text x="1000" y="303" text-anchor="end" class="white" font-size="28" font-weight="600">4.674 s</text>
+
+  <text x="145" y="339" class="muted" font-size="14">0 s</text>
+  <text x="820" y="339" text-anchor="end" class="muted" font-size="14">15.493 s</text>
+
+  <rect x="40" y="378" width="960" height="112" rx="14" fill="#101010"/>
+  <circle cx="65" cy="408" r="4" fill="#52e58b"/>
+  <text x="81" y="414" class="white" font-size="17" font-weight="600">Already connected</text>
+  <text x="64" y="451" class="muted" font-size="16">Output verification only · a separate operation, not a cold reconnect.</text>
+  <text x="975" y="441" text-anchor="end" class="white" font-size="33" font-weight="600">211 ms</text>
+
+  <text x="40" y="537" class="muted" font-size="15">2 local cold-start samples · AirPods Pro 3 · driver-dependent</text>
+  <text x="40" y="565" class="muted" font-size="15">No Windows baseline measured. No speedup claim. Other models have not been timed.</text>
+  <text x="40" y="593" fill="#777" font-size="14">Timings verify software readiness; audible first sound and physical case wake were not measured.</text>
+</svg>

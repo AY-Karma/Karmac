@@ -1,0 +1,15 @@
+build/
+artifacts/
+*.user
+*.suo
+.vs/
+downloads/*.zip
+*.log
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+SHA256SUMS.txt

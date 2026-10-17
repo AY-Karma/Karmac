@@ -1,0 +1,253 @@
+{
+    "schemaVersion":  1,
+    "reviewedAt":  "2026-10-17",
+    "purpose":  "Stable per-model local image keys and official product references. No proprietary image license is asserted.",
+    "appleTerms":  "https://www.apple.com/legal/internet-services/terms/site.html",
+    "appleImageGuidelines":  "https://www.apple.com/legal/intellectual-property/guidelinesfor3rdparties.html",
+    "rightsPermissions":  "https://www.apple.com/legal/contact/rights-permissions.html",
+    "redistributableOfficialImageFiles":  [
+
+                                          ],
+    "models":  [
+                   {
+                       "key":  "airpods-1",
+                       "name":  "AirPods (1st generation)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-1",
+                       "bundledIllustration":  "../headphones/airpods-long-stem.png"
+                   },
+                   {
+                       "key":  "airpods-2",
+                       "name":  "AirPods (2nd generation)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-2",
+                       "bundledIllustration":  "../headphones/airpods-long-stem.png"
+                   },
+                   {
+                       "key":  "airpods-3",
+                       "name":  "AirPods (3rd generation)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-3",
+                       "bundledIllustration":  "../headphones/airpods-short-stem.png"
+                   },
+                   {
+                       "key":  "airpods-4",
+                       "name":  "AirPods 4",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-4",
+                       "bundledIllustration":  "../headphones/airpods-short-stem.png"
+                   },
+                   {
+                       "key":  "airpods-4-anc",
+                       "name":  "AirPods 4 with Active Noise Cancellation",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-4-anc",
+                       "bundledIllustration":  "../headphones/airpods-short-stem.png"
+                   },
+                   {
+                       "key":  "airpods-5",
+                       "name":  "AirPods 5",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-5",
+                       "bundledIllustration":  "../headphones/airpods-short-stem.png"
+                   },
+                   {
+                       "key":  "airpods-5-wireless",
+                       "name":  "AirPods 5 with Wireless Charging Case",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-5-wireless",
+                       "bundledIllustration":  "../headphones/airpods-short-stem.png"
+                   },
+                   {
+                       "key":  "airpods-pro",
+                       "name":  "AirPods Pro",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-pro",
+                       "bundledIllustration":  "../headphones/airpods-pro.png"
+                   },
+                   {
+                       "key":  "airpods-pro-2-lightning",
+                       "name":  "AirPods Pro 2 (Lightning)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-pro-2-lightning",
+                       "bundledIllustration":  "../headphones/airpods-pro.png"
+                   },
+                   {
+                       "key":  "airpods-pro-2-usbc",
+                       "name":  "AirPods Pro 2 (USB-C)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-pro-2-usbc",
+                       "bundledIllustration":  "../headphones/airpods-pro.png"
+                   },
+                   {
+                       "key":  "airpods-pro-3",
+                       "name":  "AirPods Pro 3",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-pro-3",
+                       "bundledIllustration":  "../airpods-pro-3-original.png"
+                   },
+                   {
+                       "key":  "airpods-max-lightning",
+                       "name":  "AirPods Max (Lightning)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-max-lightning",
+                       "bundledIllustration":  "../headphones/max.png"
+                   },
+                   {
+                       "key":  "airpods-max-usbc",
+                       "name":  "AirPods Max (USB-C)",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-max-usbc",
+                       "bundledIllustration":  "../headphones/max.png"
+                   },
+                   {
+                       "key":  "airpods-max-2",
+                       "name":  "AirPods Max 2",
+                       "officialReference":  "https://support.apple.com/en-us/109525",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "airpods-max-2",
+                       "bundledIllustration":  "../headphones/max.png"
+                   },
+                   {
+                       "key":  "powerbeats-3",
+                       "name":  "Powerbeats3 Wireless",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "powerbeats-3",
+                       "bundledIllustration":  "../headphones/powerbeats-cabled.png"
+                   },
+                   {
+                       "key":  "beats-x",
+                       "name":  "BeatsX",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-x",
+                       "bundledIllustration":  "../headphones/beats-neckband.png"
+                   },
+                   {
+                       "key":  "beats-solo-3",
+                       "name":  "Beats Solo3 Wireless",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-solo-3",
+                       "bundledIllustration":  "../headphones/solo.png"
+                   },
+                   {
+                       "key":  "beats-studio-3",
+                       "name":  "Beats Studio3 Wireless",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-studio-3",
+                       "bundledIllustration":  "../headphones/studio.png"
+                   },
+                   {
+                       "key":  "powerbeats-pro",
+                       "name":  "Powerbeats Pro",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "powerbeats-pro",
+                       "bundledIllustration":  "../headphones/powerbeats-pro.png"
+                   },
+                   {
+                       "key":  "beats-solo-pro",
+                       "name":  "Beats Solo Pro",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-solo-pro",
+                       "bundledIllustration":  "../headphones/solo.png"
+                   },
+                   {
+                       "key":  "beats-flex",
+                       "name":  "Beats Flex",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-flex",
+                       "bundledIllustration":  "../headphones/beats-neckband.png"
+                   },
+                   {
+                       "key":  "beats-studio-buds",
+                       "name":  "Beats Studio Buds",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-studio-buds",
+                       "bundledIllustration":  "../headphones/beats-buds.png"
+                   },
+                   {
+                       "key":  "beats-fit-pro",
+                       "name":  "Beats Fit Pro",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-fit-pro",
+                       "bundledIllustration":  "../headphones/beats-fit-pro.png"
+                   },
+                   {
+                       "key":  "powerbeats-4",
+                       "name":  "Powerbeats",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "powerbeats-4",
+                       "bundledIllustration":  "../headphones/powerbeats-cabled.png"
+                   },
+                   {
+                       "key":  "beats-studio-buds-plus",
+                       "name":  "Beats Studio Buds +",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-studio-buds-plus",
+                       "bundledIllustration":  "../headphones/beats-buds.png"
+                   },
+                   {
+                       "key":  "beats-studio-pro",
+                       "name":  "Beats Studio Pro",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-studio-pro",
+                       "bundledIllustration":  "../headphones/studio.png"
+                   },
+                   {
+                       "key":  "beats-solo-4",
+                       "name":  "Beats Solo 4",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-solo-4",
+                       "bundledIllustration":  "../headphones/solo.png"
+                   },
+                   {
+                       "key":  "beats-solo-buds",
+                       "name":  "Beats Solo Buds",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-solo-buds",
+                       "bundledIllustration":  "../headphones/beats-buds.png"
+                   },
+                   {
+                       "key":  "powerbeats-pro-2",
+                       "name":  "Powerbeats Pro 2",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "powerbeats-pro-2",
+                       "bundledIllustration":  "../headphones/powerbeats-pro.png"
+                   },
+                   {
+                       "key":  "beats-360",
+                       "name":  "Beats 360",
+                       "officialReference":  "https://support.apple.com/beats",
+                       "bundledImage":  null,
+                       "localImageBaseName":  "beats-360",
+                       "bundledIllustration":  "../headphones/studio.png"
+                   }
+               ]
+}

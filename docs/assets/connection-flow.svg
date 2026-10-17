@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="416" viewBox="0 0 1040 416" role="img" aria-labelledby="title desc">
+  <title id="title">One click to connect your saved headphones</title>
+  <desc id="desc">Illustration of the current Connect AirPods action leading to a connected state. Switching on or clicking Connect starts the same automatic flow: enable Bluetooth when needed, verify the saved pair, connect audio, and verify Windows output. The stages are automatic, not separate user actions. Pair once in Windows first.</desc>
+  <style>
+    text { font-family: 'Segoe UI', Arial, sans-serif; }
+    .muted { fill: #9a9a9a; font-size: 16px; }
+    .label { fill: #9a9a9a; font-size: 12px; letter-spacing: 1.7px; }
+  </style>
+  <rect width="1040" height="416" rx="20" fill="#000"/>
+  <circle cx="44" cy="41" r="4" fill="#4ade80"/>
+  <text x="58" y="46" class="label">ONE-CLICK CONNECT</text>
+  <text x="40" y="102" fill="#f4f4f4" font-size="36" font-weight="600">One click to connect.</text>
+  <text x="40" y="137" class="muted">Switch on or click Connect. Everything else happens automatically.</text>
+  <text x="40" y="186" class="label">YOUR ACTION</text>
+  <rect x="40" y="202" width="288" height="62" rx="10" fill="#f5f5f5"/>
+  <text x="184" y="241" fill="#000" font-size="20" font-weight="500" text-anchor="middle">Connect AirPods</text>
+  <path d="M361 233h89m-8-8 8 8-8 8" fill="none" stroke="#646464" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="490" cy="232" r="5" fill="#4ade80"/>
+  <text x="508" y="240" fill="#f4f4f4" font-size="26" font-weight="500">Connected</text>
+  <text x="508" y="266" class="muted">Windows audio output verified.</text>
+  <path d="M40 303h960" stroke="#242424"/>
+  <text x="40" y="330" class="label">HANDLED BY OPENCONNECT</text>
+  <g fill="none" stroke="#4ade80" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m42 355 4 4 8-9"/><path d="m282 355 4 4 8-9"/>
+    <path d="m522 355 4 4 8-9"/><path d="m762 355 4 4 8-9"/>
+  </g>
+  <g fill="#d2d2d2" font-size="16">
+    <text x="64" y="359">Bluetooth on</text><text x="304" y="359">Saved pair checked</text>
+    <text x="544" y="359">Audio connected</text><text x="784" y="359">Output verified</text>
+  </g>
+  <text x="40" y="394" fill="#777" font-size="14">Pair once in Windows. Reconnect with one click. Follow live progress in the app.</text>
+</svg>

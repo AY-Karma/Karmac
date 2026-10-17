@@ -1,0 +1,17 @@
+The embedded AirPods Pro 3 illustration was originally generated for Karmac.
+The AirPods, AirPods Pro, AirPods Max, Beats Studio, Beats Solo, Beats buds,
+Beats Fit Pro, Powerbeats Pro, Beats neckband and cabled Powerbeats family renders
+in assets/headphones are original AI-generated product illustrations
+created with the built-in imagegen tool for Karmac. They show example
+finishes and approximate family design, not exact color or generation identity.
+They are embedded in the executable and do not require downloads at runtime.
+These are illustrative assets, not official Apple product renders. Their generated
+alpha and soft edge light are preserved. The original vector illustrations in
+MainWindow.xaml remain available while raster artwork loads or is unavailable.
+
+Model-specific local images supplied by the user are loaded from the user's
+Karmac/Artwork folder and are not embedded or included in release archives.
+Windows manufacturer device images, when available, are retrieved for the paired
+device only. Their availability and authorship are not guaranteed.
+Apple, AirPods and Beats product names identify compatible products. Karmac
+is independent and is not affiliated with or endorsed by Apple Inc.

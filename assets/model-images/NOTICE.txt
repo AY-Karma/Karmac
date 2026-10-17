@@ -1,0 +1,13 @@
+No Apple or Beats proprietary product photography is bundled in this directory.
+catalog.json records official product-reference pages and stable local image keys.
+
+The optional importer copies a user-supplied PNG/JPEG unchanged into the user's
+LocalAppData/Karmac/Artwork folder. Use images you have the right to use.
+These local files are neither embedded in the EXE nor included in release ZIPs.
+Apple website downloads do not grant a general redistribution license.
+Apple's published terms and rights-request information are linked in catalog.json.
+
+Windows-provided manufacturer device images, when available, remain Windows
+metadata and are retrieved only for the exact paired device. Their tooltip says
+"Windows-provided device image"; this does not assert Apple authorship or endorsement.
+Otherwise the app displays original illustrative family artwork.
