@@ -1,3 +1,9 @@
+The Karmac signal-K app icon is original project artwork, generated from
+geometric paths by tools/Create-AppIcon.py (Pillow). Karmac.svg is the editable
+vector export; Karmac.png and Karmac.ico are rendered exports. No third-party
+logos, fonts or stock icon files are incorporated. See docs/branding.md for
+design references. These project-authored assets use the project's MIT license.
+
 The embedded AirPods Pro 3 illustration was originally generated for Karmac.
 The AirPods, AirPods Pro, AirPods Max, Beats Studio, Beats Solo, Beats buds,
 Beats Fit Pro, Powerbeats Pro, Beats neckband and cabled Powerbeats family renders

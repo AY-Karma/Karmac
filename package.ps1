@@ -1,5 +1,5 @@
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')][string]$Version = '1.0.0-preview.1',
+    [ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')][string]$Version = '1.0.0-preview.2',
     # Use only to package an already tested binary, including after trusted signing.
     [switch]$UseExistingBuild
 )

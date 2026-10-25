@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a connection, display or battery problem.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include personal device names, Bluetooth addresses, device IDs, settings.json or complete diagnostic dumps.
+        For security vulnerabilities, follow SECURITY.md instead of posting details publicly.
+  - type: input
+    id: version
+    attributes:
+      label: Karmac version
+      placeholder: 1.0.0-preview.2
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Windows version and headphone model
+      placeholder: Windows 11; AirPods Pro 3 (do not include your personal device name)
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include whether Bluetooth was on and whether the headphones were connected to another host.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted screenshots or short error message
+      description: Review every attachment for personal information before uploading it.

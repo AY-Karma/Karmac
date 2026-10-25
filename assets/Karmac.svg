@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Karmac</title>
+  <desc>An ivory and amber K with flowing signal branches on an ink-blue tile.</desc>
+  <defs>
+    <linearGradient id="tile" x2="0" y2="1"><stop stop-color="#293444"/><stop offset="1" stop-color="#090f18"/></linearGradient>
+    <linearGradient id="lower" x2="0" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#ffc772"/><stop offset="1" stop-color="#f4593d"/></linearGradient>
+    <linearGradient id="upper" x2="0" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#fff2d3"/><stop offset="1" stop-color="#ffa352"/></linearGradient>
+    <linearGradient id="stem" x2="0" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#fff9e7"/><stop offset="1" stop-color="#ffca82"/></linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="55" fill="url(#tile)" stroke="#67778b" stroke-opacity=".47"/>
+  <path d="M82 128 C129 128,137 186,181 186" stroke="url(#lower)" stroke-width="29" stroke-linecap="round" fill="none"/>
+  <path d="M82 128 C129 128,137 70,181 70" stroke="url(#upper)" stroke-width="29" stroke-linecap="round" fill="none"/>
+  <rect x="60" y="55" width="29" height="146" rx="14.5" fill="url(#stem)"/>
+</svg>

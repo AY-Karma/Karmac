@@ -37,6 +37,7 @@ foreach ($readmeImage in $readmeImages) {
 }
 New-Item -ItemType Directory -Force -Path artifacts\assets | Out-Null
 Copy-Item -LiteralPath assets\NOTICE.txt -Destination artifacts\assets\NOTICE.txt -Force
+Copy-Item -LiteralPath assets\Karmac.png -Destination artifacts\assets\Karmac.png -Force
 $exe = Get-Item -LiteralPath 'artifacts\Karmac.exe'
 Write-Host ('Built {0} ({1:N0} KB)' -f $exe.FullName, ($exe.Length / 1KB))
 if ($Test) {

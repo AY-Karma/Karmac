@@ -21,10 +21,10 @@ using Forms = System.Windows.Forms;
 [assembly: AssemblyTitle("Karmac")]
 [assembly: AssemblyProduct("Karmac")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 AY-Karma and contributors")]
-[assembly: AssemblyInformationalVersion("1.0.0-preview.1")]
+[assembly: AssemblyInformationalVersion("1.0.0-preview.2")]
 [assembly: AssemblyDescription("One-click reconnection for paired Apple and Beats headphones")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.1")]
 
 namespace Karmac
 {

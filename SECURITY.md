@@ -1,10 +1,12 @@
 # Security policy
 
-The initial `1.0.0-preview.1` build is an experimental preview. Only the latest published preview will receive fixes; there is no response-time or support guarantee. This repository and its releases are private.
+Karmac releases are experimental previews. Only the latest published preview receives fixes; there is no response-time or support guarantee. Use the latest release rather than an older preview.
 
 ## Report a vulnerability
 
-While the repository is private, contact the maintainer through an existing private channel, or ask for a reporting channel without including exploit details. Do not post credentials, Bluetooth addresses, personal device dumps, or an unpatched vulnerability publicly. GitHub private vulnerability reporting must be enabled and verified if this repository later becomes public; that channel is not currently advertised as live.
+When GitHub private vulnerability reporting is enabled, use **Security → Advisories → Report a vulnerability** in this repository. If that button is unavailable, contact the maintainer through an existing private channel, or open an issue asking for a private reporting channel **without exploit details**. Do not post credentials, Bluetooth addresses, personal device dumps, or an unpatched vulnerability publicly.
+
+Maintainers must enable and verify private vulnerability reporting when making the repository public. A reporting button is not promised until it is enabled. See [release preparation](docs/releasing.md).
 
 Include the affected release, Windows version, reproduction steps, expected/observed behavior, and a minimal redacted example. Ordinary connection failures can be reported as bugs after redacting device names and IDs. See [privacy](PRIVACY.md).
 

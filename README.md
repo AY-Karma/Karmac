@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/Karmac.png" alt="Karmac's ivory and amber signal-K icon" width="88" height="88">
+
 # Karmac
 
 **Your Apple earphones. One connection switch. Windows audio, ready.**
@@ -12,9 +14,9 @@ A small, portable Windows app for reconnecting paired AirPods and Beats, control
   <strong>Portable</strong>
 </p>
 
-[**Download for Windows (x64)**](https://github.com/AY-Karma/Karmac/releases/download/v1.0.0-preview.1/Karmac-Windows-x64.zip) · [SHA-256 checksums](https://github.com/AY-Karma/Karmac/releases/download/v1.0.0-preview.1/SHA256SUMS.txt)
+[**Download for Windows (x64)**](https://github.com/AY-Karma/Karmac/releases) · Choose the newest preview and download `Karmac-Windows-x64.zip` with its `SHA256SUMS.txt`.
 
-**Private preview:** downloads require access to this repository. This build is **unsigned**. [Download trust](docs/windows-trust.md).
+**Preview software · Unsigned.** Windows may warn or block the download. [Download trust](docs/windows-trust.md). While the repository is private, downloads require repository access.
 
 [Get started](#get-started) · [Device compatibility](#device-compatibility) · [Measured connections](#measured-connections) · [Build](#build)
 
@@ -56,6 +58,8 @@ Prefer to keep your mouse or keyboard connected? In **Settings**, turn off **Tur
 
 Closing the window leaves Karmac running in the tray. Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> to connect the saved pair; use **Settings → Quit app** to exit.
 
+To update, quit Karmac, extract the new ZIP into its application folder, then launch it again. Your preferences stay in `%LOCALAPPDATA%\Karmac`. There is no automatic updater.
+
 <details>
 <summary><strong>What is in the portable package?</strong></summary>
 
@@ -69,7 +73,7 @@ Keep these files together when extracting the app:
 | `LICENSE` | Karmac's MIT license. |
 | `THIRD-PARTY-NOTICES.txt` | Required notices for the open-source implementations used. |
 | `docs/assets/` | Visuals used by this README; not required to run the app. |
-| `assets/NOTICE.txt` | Image provenance and artwork attribution. |
+| `assets/NOTICE.txt`, `assets/Karmac.png` | Artwork attribution and the icon used by this README. |
 | `PRIVACY.md`, `SECURITY.md`, `docs/` | Privacy, reporting, compatibility, licensing, and release notes. |
 
 The application does not need a separate browser runtime, Node.js, or a .NET SDK to run.
