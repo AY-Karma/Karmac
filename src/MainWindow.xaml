@@ -290,7 +290,7 @@
                       <TextBlock x:Name="ConnectionBadge" Text="Checking" FontSize="11" Foreground="#DADADA" TextWrapping="NoWrap" />
                     </StackPanel>
                     <TextBlock x:Name="StatusTitle" Text="Getting ready" FontSize="10" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="13,4,0,0" />
-                    <ProgressBar x:Name="BusyBar" IsIndeterminate="True" Height="2" Margin="13,5,0,0" Foreground="#F5F5F5" Background="#292929" BorderThickness="0" />
+                    <ProgressBar x:Name="BusyBar" Visibility="Collapsed" Height="2" Margin="13,5,0,0" Foreground="#F5F5F5" Background="#292929" BorderThickness="0" />
                   </StackPanel>
                   <ToggleButton x:Name="ConnectionToggle" Grid.Column="2" Style="{StaticResource ConnectionSwitch}" VerticalAlignment="Center" IsThreeState="False" AutomationProperties.Name="Headphone connection and laptop Bluetooth" AutomationProperties.HelpText="On turns Bluetooth on and connects the selected headphones. Off turns Bluetooth off for the entire laptop, including other Bluetooth devices." ToolTip="On: turn Bluetooth on and connect the selected headphones.&#x0a;Off: turn Bluetooth off across this laptop." ToolTipService.ShowOnDisabled="True" />
                 </Grid>

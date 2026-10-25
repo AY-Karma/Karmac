@@ -80,6 +80,7 @@ namespace Karmac.Tests
         {
             Assert(await Until(() => Field<bool>(controller, "initialized") && !Field<bool>(controller, "refreshing"), 10000),
                 "Real Windows discovery finishes within 10 seconds");
+            VerifyBusyIndicator(controller, window);
             var picker = (ComboBox)window.FindName("DevicePicker");
             if (background)
             {
@@ -632,6 +633,29 @@ namespace Karmac.Tests
                 trace.Reset(); SetField(controller, "radioState", radio);
                 window.Width = width; window.Height = height; Invoke(controller, "UpdateDevice"); Invoke(controller, "UpdateBattery");
             }
+        }
+
+        private static void VerifyBusyIndicator(AppController controller, Window window)
+        {
+            var bar = (ProgressBar)window.FindName("BusyBar");
+            Invoke(controller, "SetStatus", "Idle", "Idle animation regression check", false, false);
+            Assert(!bar.IsIndeterminate, "Idle status releases the busy indicator animation");
+            Invoke(controller, "SetStatus", "Working", "Synthetic progress; no hardware mutation", true, false);
+            Assert(bar.IsIndeterminate == SystemParameters.ClientAreaAnimation,
+                "Visible progress follows the Windows animation preference");
+            window.Hide();
+            Assert(!bar.IsIndeterminate, "Tray-hidden progress stops the busy indicator animation");
+            window.Show();
+            Assert(bar.IsIndeterminate == SystemParameters.ClientAreaAnimation,
+                "Showing in-progress work restores the busy indicator animation");
+            window.WindowState = WindowState.Minimized;
+            Assert(!bar.IsIndeterminate, "Minimized progress stops the busy indicator animation");
+            window.WindowState = WindowState.Normal;
+            Assert(bar.IsIndeterminate == SystemParameters.ClientAreaAnimation,
+                "Restoring in-progress work restores the busy indicator animation");
+            Invoke(controller, "SetStatus", "Ready", "Regression check complete", false, false);
+            window.Hide(); window.Show();
+            Assert(!bar.IsIndeterminate, "Showing an idle window does not restart the busy indicator animation");
         }
 
         private static async Task VerifyArtworkMotion(AppController controller, Window window, AudioTarget target)

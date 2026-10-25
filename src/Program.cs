@@ -141,7 +141,8 @@ namespace Karmac
             Get<Image>("DeviceArtwork").RenderTransform = artworkMotion.Transform;
             Get<StackPanel>("MainPanel").IsVisibleChanged += (sender, e) => UpdateArtworkMotion();
             window.IsVisibleChanged += (sender, e) => UpdateArtworkMotion();
-            window.StateChanged += (sender, e) => UpdateArtworkMotion();
+            window.StateChanged += (sender, e) => { UpdateArtworkMotion(); UpdateBusyIndicator(); };
+            Get<ProgressBar>("BusyBar").IsVisibleChanged += (sender, e) => UpdateBusyIndicator();
             SystemParameters.StaticPropertyChanged += AnimationPreferenceChanged;
             if (capturePath == null)
                 activationWait = ThreadPool.RegisterWaitForSingleObject(activation, (state, timedOut) => {
@@ -722,7 +723,7 @@ namespace Karmac
         private void AnimationPreferenceChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName != "ClientAreaAnimation" || exiting || window.Dispatcher.HasShutdownStarted) return;
-            window.Dispatcher.BeginInvoke(new Action(UpdateArtworkMotion));
+            window.Dispatcher.BeginInvoke(new Action(() => { UpdateArtworkMotion(); UpdateBusyIndicator(); }));
         }
 
         private async void LoadDeviceArtwork(AudioTarget target, string modelKey, string bluetoothId, string cacheKey, int revision)
@@ -798,11 +799,20 @@ namespace Karmac
             Get<TextBlock>(prefix + "Detail").Visibility = percent.HasValue ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        private void UpdateBusyIndicator()
+        {
+            var bar = Get<ProgressBar>("BusyBar");
+            // Collapsing a WPF progress bar alone can leave its template clocks ticking.
+            bar.IsIndeterminate = !exiting && capturePath == null && SystemParameters.ClientAreaAnimation &&
+                bar.IsVisible && window.WindowState != WindowState.Minimized;
+        }
+
         private void SetStatus(string title, string message, bool progress, bool warning)
         {
             Text("StatusTitle", title);
             Get<TextBlock>("StatusTitle").Visibility = progress || warning ? Visibility.Visible : Visibility.Collapsed;
             Get<ProgressBar>("BusyBar").Visibility = progress ? Visibility.Visible : Visibility.Collapsed;
+            UpdateBusyIndicator();
             var panel = Get<Border>("StatusPanel");
             panel.ToolTip = new TextBlock { Text = title + Environment.NewLine + message, MaxWidth = 300, TextWrapping = TextWrapping.Wrap };
             Get<TextBlock>("StatusTitle").Foreground = DarkBrush(warning ? "#EABD78" : "#F2F2F2");
