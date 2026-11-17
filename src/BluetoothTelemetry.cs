@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
@@ -25,15 +26,13 @@ namespace Karmac
             { 0x2014, "AirPods Pro 2 (Lightning)" }, { 0x2024, "AirPods Pro 2 (USB-C)" },
             { 0x2027, "AirPods Pro 3" }, { 0x200A, "AirPods Max (Lightning)" },
             { 0x201F, "AirPods Max (USB-C)" }, { 0x202D, "AirPods Max 2" },
-            { 0x2036, "AirPods 5" }, { 0x2030, "AirPods 5 with Wireless Charging Case" },
-            { 0x2003, "Powerbeats3 Wireless" }, { 0x2005, "BeatsX" },
-            { 0x2006, "Beats Solo3 Wireless" }, { 0x2009, "Beats Studio3 Wireless" },
-            { 0x200B, "Powerbeats Pro" }, { 0x200C, "Beats Solo Pro" },
-            { 0x200D, "Powerbeats" }, { 0x2010, "Beats Flex" },
-            { 0x2011, "Beats Studio Buds" }, { 0x2012, "Beats Fit Pro" },
-            { 0x2016, "Beats Studio Buds +" }, { 0x2017, "Beats Studio Pro" },
-            { 0x201D, "Powerbeats Pro 2" }, { 0x2025, "Beats Solo 4" },
-            { 0x2026, "Beats Solo Buds" }, { 0x2038, "Beats 360" }
+            { 0x2036, "AirPods 5" }, { 0x2030, "AirPods 5 with Wireless Charging Case" }
+        };
+        // Beats share Apple's Bluetooth vendor ID. Karmac is AirPods-only, so these known
+        // Beats products are excluded even when Windows exposes audio endpoints for them.
+        private static readonly HashSet<int> Beats = new HashSet<int> {
+            0x2003, 0x2005, 0x2006, 0x2009, 0x200B, 0x200C, 0x200D, 0x2010, 0x2011, 0x2012,
+            0x2016, 0x2017, 0x201D, 0x2025, 0x2026, 0x2038
         };
         // Product identifiers are identity facts, not permission to decode their battery
         // payloads. Keep the validated BLE format allowlist in BatteryMonitor separate.
@@ -43,13 +42,7 @@ namespace Karmac
             { 0x2036, "airpods-5" }, { 0x2030, "airpods-5-wireless" },
             { 0x200E, "airpods-pro" }, { 0x2014, "airpods-pro-2-lightning" },
             { 0x2024, "airpods-pro-2-usbc" }, { 0x2027, "airpods-pro-3" },
-            { 0x200A, "airpods-max-lightning" }, { 0x201F, "airpods-max-usbc" }, { 0x202D, "airpods-max-2" },
-            { 0x2003, "powerbeats-3" }, { 0x2005, "beats-x" }, { 0x2006, "beats-solo-3" },
-            { 0x2009, "beats-studio-3" }, { 0x200B, "powerbeats-pro" }, { 0x200C, "beats-solo-pro" },
-            { 0x200D, "powerbeats-4" }, { 0x2010, "beats-flex" }, { 0x2011, "beats-studio-buds" },
-            { 0x2012, "beats-fit-pro" }, { 0x2016, "beats-studio-buds-plus" },
-            { 0x2017, "beats-studio-pro" }, { 0x201D, "powerbeats-pro-2" },
-            { 0x2025, "beats-solo-4" }, { 0x2026, "beats-solo-buds" }, { 0x2038, "beats-360" }
+            { 0x200A, "airpods-max-lightning" }, { 0x201F, "airpods-max-usbc" }, { 0x202D, "airpods-max-2" }
         };
         internal static bool IsKnown(int model) { return Names.ContainsKey(model); }
         internal static int[] KnownIds { get { return Names.Keys.OrderBy(id => id).ToArray(); } }
@@ -61,27 +54,24 @@ namespace Karmac
         {
             string key; return Artwork.TryGetValue(model, out key) ? key : "audio-unknown";
         }
-        internal static bool IsBeats(int model)
+        // How the UI refers to a pair: "AirPods", or generic "headphones" for an unknown ID.
+        internal static string Term(int model)
         {
-            string key = ArtworkKey(model); return key.StartsWith("beats-", StringComparison.Ordinal) || key.StartsWith("powerbeats-", StringComparison.Ordinal);
+            return model == 0 || !IsKnown(model) ? "headphones" : "AirPods";
         }
+        internal static bool IsBeats(int model) { return Beats.Contains(model); }
         internal static bool IsOverEar(int model)
         {
-            return model == 0x200A || model == 0x201F || model == 0x202D || model == 0x2006 || model == 0x2009 ||
-                model == 0x200C || model == 0x2017 || model == 0x2025 || model == 0x2038;
+            return model == 0x200A || model == 0x201F || model == 0x202D;
         }
-        internal static bool IsTrueWireless(int model)
-        {
-            return IsKnown(model) && !IsOverEar(model) && model != 0x2003 && model != 0x2005 && model != 0x200D && model != 0x2010;
-        }
-        internal static bool HasCase(int model) { return IsTrueWireless(model) && model != 0x2026; }
+        internal static bool IsTrueWireless(int model) { return IsKnown(model) && !IsOverEar(model); }
+        internal static bool HasCase(int model) { return IsTrueWireless(model); }
         internal static string ComponentLayout(int model) { return HasCase(model) ? "dual-case" : IsTrueWireless(model) ? "dual" : "single"; }
         internal static string Family(int model)
         {
             if (model == 0x2027) return "pro3";
             if (model == 0x200E || model == 0x2014 || model == 0x2024) return "pro";
             if (model == 0x200A || model == 0x201F || model == 0x202D) return "max";
-            if (IsBeats(model)) return IsOverEar(model) ? "beats-headphones" : IsTrueWireless(model) ? "beats-buds" : "beats-neckband";
             return IsKnown(model) ? "pods" : "unknown";
         }
     }
@@ -94,10 +84,14 @@ namespace Karmac
         public bool LeftCharging, RightCharging, CaseCharging;
         public bool LeftInEar, RightInEar;
         public short Rssi;
-        public DateTime Seen;
+        public DateTime Seen, FirstSeen;
+        public DateTime? WornSince;
         public string Source;
         public bool UserSelected;
+        // Matched automatically by elimination rather than proven identity.
+        public bool Inferred;
         public bool Fresh { get { return DateTime.UtcNow - Seen < TimeSpan.FromSeconds(90); } }
+        public bool Worn { get { return LeftInEar || RightInEar; } }
         public string AddressLabel { get { return Address.ToString("X12"); } }
         public override string ToString()
         {
@@ -136,7 +130,6 @@ namespace Karmac
     {
         RadioState State { get; }
         Task<RadioAccessStatus> TurnOnAsync();
-        Task<RadioAccessStatus> TurnOffAsync();
     }
 
     internal static class BluetoothPower
@@ -147,7 +140,20 @@ namespace Karmac
             internal Adapter(Radio value) { radio = value; }
             public RadioState State { get { return radio.State; } }
             public Task<RadioAccessStatus> TurnOnAsync() { return WinRtTask.Wait(radio.SetStateAsync(RadioState.On), 8000); }
-            public Task<RadioAccessStatus> TurnOffAsync() { return WinRtTask.Wait(radio.SetStateAsync(RadioState.Off), 8000); }
+        }
+
+        // One rule for every caller: no adapter, any On, all Off/Disabled, otherwise Unknown.
+        internal static string Describe(IList<Radio> radios)
+        {
+            var bluetooth = radios.Where(r => r.Kind == RadioKind.Bluetooth).ToList();
+            if (bluetooth.Count == 0) return "No adapter";
+            if (bluetooth.Any(r => r.State == RadioState.On)) return "On";
+            return bluetooth.All(r => r.State == RadioState.Off || r.State == RadioState.Disabled) ? "Off" : "Unknown";
+        }
+
+        internal static async Task<string> DescribeAsync()
+        {
+            return Describe((await WinRtTask.Wait(Radio.GetRadiosAsync(), 4000)).ToList());
         }
 
         // Call from the user's connect action: Windows can require first-use consent.
@@ -157,57 +163,6 @@ namespace Karmac
             return await EnsureOnAsync(radios.Where(r => r.Kind == RadioKind.Bluetooth)
                 .Select(r => (IBluetoothRadio)new Adapter(r)).ToList(),
                 () => WinRtTask.Wait(Radio.RequestAccessAsync()), starting, 8000);
-        }
-
-        internal static async Task<bool> EnsureOffAsync(Action starting)
-        {
-            var radios = await WinRtTask.Wait(Radio.GetRadiosAsync(), 4000);
-            return await EnsureOffAsync(radios.Where(r => r.Kind == RadioKind.Bluetooth)
-                .Select(r => (IBluetoothRadio)new Adapter(r)).ToList(),
-                () => WinRtTask.Wait(Radio.RequestAccessAsync()), starting, 8000);
-        }
-
-        // Turning Bluetooth off is laptop-wide: every Bluetooth adapter must
-        // confirm Off/Disabled before success. Wi-Fi and pairing records are untouched.
-        internal static async Task<bool> EnsureOffAsync(IList<IBluetoothRadio> radios,
-            Func<Task<RadioAccessStatus>> requestAccess, Action starting, int timeoutMs)
-        {
-            if (!radios.Any(r => r.State == RadioState.On))
-            {
-                if (radios.Any(r => r.State != RadioState.Off && r.State != RadioState.Disabled))
-                    throw new InvalidOperationException("Windows could not confirm that Bluetooth is off.");
-                return false;
-            }
-            if (starting != null) starting();
-            var access = await requestAccess();
-            if (access != RadioAccessStatus.Allowed)
-                throw new InvalidOperationException("Windows did not allow Bluetooth to turn off (" + access + "). Check radio access or your administrator's policy.");
-
-            // Issue all adapter requests together, including when one adapter refuses.
-            var errors = await Task.WhenAll(radios.Where(r => r.State == RadioState.On)
-                .Select(r => TurnOffAndConfirmAsync(r, timeoutMs)).ToArray());
-            var failure = errors.FirstOrDefault(error => error != null);
-            if (failure != null) throw failure;
-            if (radios.Any(r => r.State != RadioState.Off && r.State != RadioState.Disabled))
-                throw new InvalidOperationException("Windows could not confirm that every Bluetooth adapter is off.");
-            return true;
-        }
-
-        private static async Task<Exception> TurnOffAndConfirmAsync(IBluetoothRadio radio, int timeoutMs)
-        {
-            try
-            {
-                var result = await radio.TurnOffAsync();
-                if (result != RadioAccessStatus.Allowed)
-                    throw new InvalidOperationException("Windows refused to disable the Bluetooth adapter (" + result + ").");
-                var wait = Stopwatch.StartNew();
-                while (radio.State != RadioState.Off && radio.State != RadioState.Disabled && wait.ElapsedMilliseconds < timeoutMs)
-                    await Task.Delay(50);
-                if (radio.State != RadioState.Off && radio.State != RadioState.Disabled)
-                    throw new TimeoutException("The Bluetooth adapter did not turn off in time.");
-                return null;
-            }
-            catch (Exception error) { return error; }
         }
 
         // Returns true only when this operation enabled an adapter. Never cycles
@@ -253,18 +208,15 @@ namespace Karmac
             var pairedTargets = new HashSet<AudioTarget>();
             try
             {
-                var radioTask = WinRtTask.Wait(Radio.GetRadiosAsync());
-                if (await Task.WhenAny(radioTask, Task.Delay(2500)) == radioTask)
-                {
-                    var radios = await radioTask;
-                    var bluetooth = radios.Where(r => r.Kind == RadioKind.Bluetooth).ToList();
-                    result.Radio = bluetooth.Count == 0 ? "No adapter" : bluetooth.Any(r => r.State == RadioState.On) ? "On" : "Off";
-                }
+                try { result.Radio = await BluetoothPower.DescribeAsync(); }
+                catch (Exception error) { Log.Write("Radio state: " + error.Message); }
                 string[] props = { "System.Devices.Aep.ContainerId", "System.Devices.Aep.DeviceAddress" };
-                var pairedTask = WinRtTask.Wait(DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true), props));
-                if (await Task.WhenAny(pairedTask, Task.Delay(4000)) == pairedTask)
+                DeviceInformationCollection paired = null;
+                try { paired = await WinRtTask.Wait(DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true), props), 4000); }
+                catch (TimeoutException) { }
+                if (paired != null)
                 {
-                    foreach (var device in await pairedTask)
+                    foreach (var device in paired)
                     {
                         string container = Property(device, props[0]);
                         var target = result.Targets.FirstOrDefault(t => SameGuid(t.ContainerId, container));
@@ -287,19 +239,27 @@ namespace Karmac
                     }
                 }
                 else result.Warning = "Windows has not confirmed the saved Bluetooth devices yet. Refresh to try again.";
-                // Recognize renamed AirPods and Beats by their verified product ID.
+                // Recognize renamed AirPods by their verified product ID.
                 // Future Apple IDs can connect generically only when Windows already
                 // exposes Bluetooth audio endpoints in this same paired container.
+                // Query only the paired containers, never every PnP device on the PC.
                 string[] pnpProps = { "System.Devices.ContainerId", "System.Devices.HardwareIds",
                     "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2", "System.Devices.BatteryLife" };
-                var pnpTask = WinRtTask.Wait(DeviceInformation.FindAllAsync(String.Empty, pnpProps, DeviceInformationKind.Device));
-                if (await Task.WhenAny(pnpTask, Task.Delay(4000)) == pnpTask)
-                {
-                    foreach (var device in await pnpTask)
+                var lookups = pairedTargets.Select(async target => {
+                    try
                     {
-                        string container = Property(device, pnpProps[0]);
-                        var target = result.Targets.FirstOrDefault(t => SameGuid(t.ContainerId, container));
-                        if (target == null) continue;
+                        var devices = await WinRtTask.Wait(DeviceInformation.FindAllAsync(ContainerQuery(target.ContainerId),
+                            pnpProps, DeviceInformationKind.Device), 3000);
+                        return new { Target = target, Devices = devices.ToList() };
+                    }
+                    catch (Exception error) { Log.Write("Device details " + target.Name + ": " + error.Message); return null; }
+                }).ToList();
+                foreach (var lookup in await Task.WhenAll(lookups))
+                {
+                    if (lookup == null) continue;
+                    var target = lookup.Target;
+                    foreach (var device in lookup.Devices)
+                    {
                         object hardware;
                         if (device.Properties.TryGetValue(pnpProps[1], out hardware))
                         {
@@ -336,30 +296,40 @@ namespace Karmac
             return result;
         }
 
-        internal static async Task VerifyPairAsync(AudioTarget target)
+        internal static string ContainerQuery(string containerId)
+        {
+            Guid container;
+            if (!Guid.TryParse(containerId, out container)) throw new ArgumentException("Invalid device container.");
+            return "System.Devices.ContainerId:=\"{" + container + "}\"";
+        }
+
+        internal static async Task VerifyPairAsync(AudioTarget target, CancellationToken token = default(CancellationToken))
         {
             var clock = Stopwatch.StartNew();
             string[] properties = { "System.Devices.Aep.ContainerId", "System.Devices.Aep.DeviceAddress" };
             do
             {
+                token.ThrowIfCancellationRequested();
                 DeviceInformation match = null;
                 if (!String.IsNullOrWhiteSpace(target.BluetoothId))
                 {
                     try
                     {
                         var info = await WinRtTask.Wait(DeviceInformation.CreateFromIdAsync(target.BluetoothId, properties,
-                            DeviceInformationKind.AssociationEndpoint), 1500);
+                            DeviceInformationKind.AssociationEndpoint), 1500, token);
                         if (info != null && info.Pairing.IsPaired && SameGuid(Property(info, properties[0]), target.ContainerId)) match = info;
                     }
+                    catch (OperationCanceledException) { throw; }
                     catch (Exception error) { Log.Write("Saved pair lookup: " + error.Message); }
                 }
                 if (match == null)
                 {
                     try
                     {
-                        var paired = await WinRtTask.Wait(DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true), properties), 2500);
+                        var paired = await WinRtTask.Wait(DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true), properties), 2500, token);
                         match = paired.FirstOrDefault(info => SameGuid(Property(info, properties[0]), target.ContainerId));
                     }
+                    catch (OperationCanceledException) { throw; }
                     catch (Exception error) { Log.Write("Saved pair confirmation: " + error.Message); }
                 }
                 if (match != null)
@@ -371,9 +341,9 @@ namespace Karmac
                     target.RequiresPairingCheck = false;
                     return;
                 }
-                await Task.Delay(150);
+                await Task.Delay(150, token);
             } while (clock.ElapsedMilliseconds < 4500);
-            throw new InvalidOperationException("Windows has not confirmed this saved AirPods pair. It may still be restoring Bluetooth, or the pair may have been removed. Try again; pair in Windows if it was removed.");
+            throw new InvalidOperationException("Windows hasn't confirmed this saved pair. It may still be restoring Bluetooth, or the pair was removed. Try again, or pair again in Windows Settings if it was removed.");
         }
 
         internal static bool SameGuid(string left, string right)
@@ -410,39 +380,49 @@ namespace Karmac
             int model;
             return Int32.TryParse(id.Substring(offset + 4, 4), NumberStyles.AllowHexSpecifier,
                 CultureInfo.InvariantCulture, out model) && (offset + 8 == id.Length || !Uri.IsHexDigit(id[offset + 8])) &&
-                (AirPodsModels.IsKnown(model) || hasBluetoothAudioEndpoint);
+                !AirPodsModels.IsBeats(model) && (AirPodsModels.IsKnown(model) || hasBluetoothAudioEndpoint);
         }
     }
 
-    // Framework's AsTask facade expects an SDK union Windows.winmd. Polling the native
-    // async operation lets builds use the split metadata already shipped with Windows.
+    // Framework's AsTask facade expects an SDK union Windows.winmd. Bridging the native
+    // Completed callback lets builds use the split metadata already shipped with Windows,
+    // without polling. A timeout or cancellation cancels the underlying operation too.
     internal static class WinRtTask
     {
-        internal static async Task<T> Wait<T>(IAsyncOperation<T> operation, int timeoutMilliseconds = 10000)
+        internal static Task<T> Wait<T>(IAsyncOperation<T> operation, int timeoutMilliseconds = 10000,
+            CancellationToken token = default(CancellationToken))
         {
+            var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var timeout = new CancellationTokenSource(timeoutMilliseconds);
+            var linked = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, token);
+            var registration = linked.Token.Register(() => {
+                bool set = token.IsCancellationRequested ? completion.TrySetCanceled(token) :
+                    completion.TrySetException(new TimeoutException("Windows took too long to respond."));
+                if (set) { try { operation.Cancel(); } catch { } }
+            });
             try
             {
-                var elapsed = Stopwatch.StartNew();
-                while (operation.Status == AsyncStatus.Started)
-                {
-                    if (elapsed.ElapsedMilliseconds > timeoutMilliseconds)
+                // Assigning Completed on an already-finished operation invokes it immediately.
+                operation.Completed = (finished, status) => {
+                    try
                     {
-                        operation.Cancel();
-                        throw new TimeoutException("Windows device enumeration took too long.");
+                        if (status == AsyncStatus.Canceled) completion.TrySetCanceled();
+                        else completion.TrySetResult(finished.GetResults());
                     }
-                    await Task.Delay(25).ConfigureAwait(false);
-                }
-                return operation.GetResults();
+                    catch (Exception error) { completion.TrySetException(error); }
+                    finally
+                    {
+                        registration.Dispose(); linked.Dispose(); timeout.Dispose();
+                        try { finished.Close(); } catch { }
+                    }
+                };
             }
-            finally
+            catch (Exception error)
             {
-                try
-                {
-                    if (operation.Status != AsyncStatus.Started) operation.Close();
-                    else operation.Completed = (finished, status) => { try { finished.Close(); } catch { } };
-                }
-                catch { }
+                registration.Dispose(); linked.Dispose(); timeout.Dispose();
+                completion.TrySetException(error);
             }
+            return completion.Task;
         }
     }
 
@@ -450,6 +430,8 @@ namespace Karmac
     {
         // A proximity hint, not a distance measurement or an identity check.
         internal const short NearbyRssiThreshold = -65;
+        // "Right next to this PC": used for automatic matching and the case-open card.
+        internal const short CloseRssi = -60;
         private readonly object gate = new object();
         private readonly Dictionary<ulong, BatteryReading> readings = new Dictionary<ulong, BatteryReading>();
         private readonly Dictionary<ulong, ResolvedIdentity> identities = new Dictionary<ulong, ResolvedIdentity>();
@@ -457,18 +439,26 @@ namespace Karmac
         private readonly HashSet<ulong> identityInFlight = new HashSet<ulong>();
         private readonly Dictionary<string, AuthorizedTarget> targets = new Dictionary<string, AuthorizedTarget>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DeviceBatteryReading> deviceBatteries = new Dictionary<string, DeviceBatteryReading>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, ManualSource> manualSources = new Dictionary<string, ManualSource>(StringComparer.OrdinalIgnoreCase);
+        // A beacon accepted for a pair, either chosen by the user or inferred. It follows
+        // the pair across BLE address rotations instead of expiring on a timer.
+        private readonly Dictionary<string, SourceLock> locks = new Dictionary<string, SourceLock>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, DateTime> connectedSince = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, DateTime> autoSuppressed = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, DeviceWatcher> batteryWatchers = new Dictionary<string, DeviceWatcher>(StringComparer.OrdinalIgnoreCase);
         private DateTime nextBatteryRefresh;
         private bool batteryRefreshInFlight, disposed;
         private BluetoothLEAdvertisementWatcher watcher;
         internal string Status = "Starting battery listener";
+        // Raised (on a background thread) when a supported model starts advertising
+        // close by, typically because its case was just opened.
+        internal event Action<BatteryReading> Appeared;
 
-        private sealed class ManualSource
+        private sealed class SourceLock
         {
             internal ulong Address;
             internal string TargetAddress;
             internal int Model;
-            internal DateTime Selected;
+            internal bool UserSelected;
         }
 
         private sealed class AuthorizedTarget
@@ -503,15 +493,68 @@ namespace Karmac
                     if (target.Battery.HasValue && target.Connected)
                         deviceBatteries[key] = new DeviceBatteryReading { Percent = target.Battery.Value,
                             Seen = DateTime.UtcNow, Source = "Windows last reported battery (may be cached)" };
+                    if (!target.PlaybackReady) connectedSince.Remove(key);
+                    else if (!connectedSince.ContainsKey(key)) connectedSince[key] = DateTime.UtcNow;
                 }
                 foreach (string key in deviceBatteries.Keys.Where(k => !targets.ContainsKey(k)).ToArray()) deviceBatteries.Remove(key);
-                foreach (string key in manualSources.Keys.Where(k => !targets.ContainsKey(k)).ToArray()) manualSources.Remove(key);
+                foreach (string key in connectedSince.Keys.Where(k => !targets.ContainsKey(k)).ToArray()) connectedSince.Remove(key);
+                foreach (var pair in locks.Where(p => { AuthorizedTarget t; return !targets.TryGetValue(p.Key, out t) ||
+                    !String.Equals(p.Value.TargetAddress, t.Address, StringComparison.OrdinalIgnoreCase); }).ToArray())
+                    locks.Remove(pair.Key);
                 connected = targets.Values.Where(t => t.Connected).ToList();
+                UpdateBatteryWatchers(connected);
                 if (connected.Count == 0 || batteryRefreshInFlight || DateTime.UtcNow < nextBatteryRefresh) return;
                 batteryRefreshInFlight = true;
                 nextBatteryRefresh = DateTime.UtcNow.AddSeconds(30);
             }
             RefreshDeviceBatteriesAsync(connected);
+        }
+
+        private static readonly string[] BatteryProperties = { "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2", "System.Devices.BatteryLife" };
+
+        // Windows' own Hands-Free battery (DEVPKEY_Bluetooth_Battery), pushed as it changes
+        // and scoped to each connected pair's container. Call with the gate held.
+        private void UpdateBatteryWatchers(List<AuthorizedTarget> connected)
+        {
+            foreach (string key in batteryWatchers.Keys.Where(k => !connected.Any(t => t.ContainerId == k)).ToArray())
+            { StopWatcher(batteryWatchers[key]); batteryWatchers.Remove(key); }
+            foreach (var target in connected)
+            {
+                if (batteryWatchers.ContainsKey(target.ContainerId)) continue;
+                string container = target.ContainerId;
+                try
+                {
+                    var deviceWatcher = DeviceInformation.CreateWatcher(DeviceDiscovery.ContainerQuery(container), BatteryProperties, DeviceInformationKind.Device);
+                    deviceWatcher.Added += (sender, info) => ReadBatteryProperties(container, info.Properties);
+                    deviceWatcher.Updated += (sender, update) => ReadBatteryProperties(container, update.Properties);
+                    // Windows only delivers updates once Added, Updated and Removed all have handlers.
+                    deviceWatcher.Removed += (sender, update) => { };
+                    deviceWatcher.Start();
+                    batteryWatchers[container] = deviceWatcher;
+                }
+                catch (Exception error) { Log.Write("Battery watcher: " + error.Message); }
+            }
+        }
+
+        private void ReadBatteryProperties(string container, IReadOnlyDictionary<string, object> properties)
+        {
+            foreach (string key in BatteryProperties)
+            {
+                object value; int percent;
+                if (properties.TryGetValue(key, out value) && value != null &&
+                    Int32.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out percent) && percent >= 0 && percent <= 100)
+                    StoreDeviceBattery(container, percent, "Windows reported battery");
+            }
+        }
+
+        private static void StopWatcher(DeviceWatcher deviceWatcher)
+        {
+            try
+            {
+                if (deviceWatcher.Status == DeviceWatcherStatus.Started || deviceWatcher.Status == DeviceWatcherStatus.EnumerationCompleted)
+                    deviceWatcher.Stop();
+            }
+            catch { }
         }
 
         internal DeviceBatteryReading GetDeviceBattery(AudioTarget target)
@@ -574,15 +617,23 @@ namespace Karmac
                     {
                         reading.Address = args.BluetoothAddress; reading.Rssi = args.RawSignalStrengthInDBm;
                         reading.Seen = DateTime.UtcNow;
+                        bool appeared;
                         lock (gate)
                         {
                             if (disposed) return;
+                            BatteryReading previous;
+                            appeared = !readings.TryGetValue(reading.Address, out previous) || !previous.Fresh;
+                            reading.FirstSeen = appeared ? reading.Seen : previous.FirstSeen;
+                            // When the buds last went into an ear, for correlating with our own connection.
+                            reading.WornSince = !reading.Worn ? null : appeared || !previous.Worn ? (DateTime?)reading.Seen : previous.WornSince;
                             readings[reading.Address] = reading;
                             foreach (var address in readings.Where(p => DateTime.UtcNow - p.Value.Seen > TimeSpan.FromMinutes(3)).Select(p => p.Key).ToArray())
                             {
                                 readings.Remove(address); identities.Remove(address); identityAttempts.Remove(address);
                             }
                         }
+                        var handler = Appeared;
+                        if (appeared && handler != null && reading.Rssi >= CloseRssi) handler(reading);
                     }
                     if (reading != null || identity != null) QueueIdentityLookup(args.BluetoothAddress, args.BluetoothAddressType);
                 }
@@ -806,41 +857,83 @@ namespace Karmac
         {
             lock (gate) return readings.Values.Where(r => r.Fresh && r.Rssi >= NearbyRssiThreshold).OrderByDescending(r => r.Rssi).ToList();
         }
-        internal List<BatteryReading> CandidatesForTarget(AudioTarget target)
-        {
-            Guid container;
-            if (target == null || !Guid.TryParse(target.ContainerId, out container)) return new List<BatteryReading>();
-            lock (gate)
-            {
-                AuthorizedTarget authorized;
-                if (disposed || !targets.TryGetValue(container.ToString(), out authorized)) return new List<BatteryReading>();
-                return readings.Values.Where(r => r.Fresh && r.Rssi >= NearbyRssiThreshold &&
-                    (authorized.Model == 0 || authorized.Model == r.Model)).OrderByDescending(r => r.Rssi).ToList();
-            }
-        }
-        internal bool SelectSource(AudioTarget target, ulong address)
-        {
-            Guid container;
-            if (target == null || !Guid.TryParse(target.ContainerId, out container)) return false;
-            lock (gate)
-            {
-                AuthorizedTarget authorized;
-                BatteryReading reading;
-                if (disposed || !targets.TryGetValue(container.ToString(), out authorized) ||
-                    !readings.TryGetValue(address, out reading) || !reading.Fresh || reading.Rssi < NearbyRssiThreshold ||
-                    (authorized.Model != 0 && authorized.Model != reading.Model)) return false;
-                manualSources[container.ToString()] = new ManualSource { Address = address,
-                    TargetAddress = authorized.Address, Model = reading.Model, Selected = DateTime.UtcNow };
-                return true;
-            }
-        }
+        // "Not my AirPods": drops an inferred source and keeps automatic inference off for
+        // this pair for a while, so only proven identity supplies its battery.
         internal void ClearSource(AudioTarget target)
         {
             Guid container;
             if (target == null || !Guid.TryParse(target.ContainerId, out container)) return;
-            lock (gate) manualSources.Remove(container.ToString());
+            lock (gate)
+            {
+                locks.Remove(container.ToString());
+                autoSuppressed[container.ToString()] = DateTime.UtcNow.AddMinutes(30);
+            }
         }
-        internal BatteryReading ForTarget(AudioTarget target)
+
+        // Called with the gate held once a locked address has gone quiet. A pair rotates its
+        // private address by stopping on the old one and starting on a new one at about the
+        // same moment (within ~2 s), with the same model, charge and signal. Move the lock
+        // only when exactly one newcomer fits; ambiguity leaves it to go stale.
+        private void FollowRotation(SourceLock held, BatteryReading old)
+        {
+            if (DateTime.UtcNow - old.Seen < TimeSpan.FromSeconds(3)) return;
+            var matches = readings.Values.Where(r => r.Address != held.Address && r.Model == held.Model && r.Fresh &&
+                r.FirstSeen >= old.Seen.AddSeconds(-2) && r.FirstSeen <= old.Seen.AddSeconds(2) &&
+                SameCharge(old, r) && Math.Abs(old.Rssi - r.Rssi) <= 15).ToList();
+            if (matches.Count == 1) held.Address = matches[0].Address;
+        }
+
+        private static bool SameCharge(BatteryReading a, BatteryReading b)
+        {
+            return Close(a.Left, b.Left) && Close(a.Right, b.Right) && Close(a.Case, b.Case);
+        }
+        private static bool Close(int? a, int? b) { return !a.HasValue || !b.HasValue || Math.Abs(a.Value - b.Value) <= 10; }
+
+        // Called with the gate held. While our pair is playing stereo, accept a beacon
+        // automatically only when all of these hold:
+        //  - it's the one and only fresh beacon of that model in range at all,
+        //  - it's close and has been stable for a few seconds,
+        //  - its own behaviour lines up with our connection: it appeared (case opened) or
+        //    went into an ear within 10 s of our stereo audio starting.
+        // Signal strength alone never decides. Anything else stays a manual choice.
+        private BatteryReading InferSource(AuthorizedTarget authorized)
+        {
+            DateTime since, suppressed;
+            var now = DateTime.UtcNow;
+            if (!IsSupportedModel(authorized.Model) || !connectedSince.TryGetValue(authorized.ContainerId, out since) ||
+                now - since < TimeSpan.FromSeconds(8)) return null;
+            if (autoSuppressed.TryGetValue(authorized.ContainerId, out suppressed) && now < suppressed) return null;
+            var sameModel = readings.Values.Where(r => r.Model == authorized.Model && now - r.Seen < TimeSpan.FromSeconds(20)).ToList();
+            if (sameModel.Count != 1) return null;
+            var only = sameModel[0];
+            if (only.Rssi < CloseRssi || now - only.FirstSeen < TimeSpan.FromSeconds(5)) return null;
+            bool appearedTogether = Math.Abs((only.FirstSeen - since).TotalSeconds) <= 10;
+            bool wornTogether = only.WornSince.HasValue && Math.Abs((only.WornSince.Value - since).TotalSeconds) <= 10;
+            if (!appearedTogether && !wornTogether) return null;
+            locks[authorized.ContainerId] = new SourceLock { Address = only.Address, TargetAddress = authorized.Address,
+                Model = only.Model, UserSelected = false };
+            return only;
+        }
+
+        // What nearby beacons of the saved model suggest, for connection messages only.
+        internal NearbyHint Nearby(AudioTarget target)
+        {
+            if (target == null || !IsSupportedModel(target.ModelId)) return NearbyHint.Unknown;
+            lock (gate)
+            {
+                if (disposed || watcher == null || watcher.Status != BluetoothLEAdvertisementWatcherStatus.Started) return NearbyHint.Unknown;
+                var own = ForTarget(target, false);
+                var near = own != null ? new List<BatteryReading> { own } : readings.Values.Where(r => r.Model == target.ModelId &&
+                    DateTime.UtcNow - r.Seen < TimeSpan.FromSeconds(15) && r.Rssi >= -75).ToList();
+                if (near.Count == 0) return NearbyHint.NotSeen;
+                return near.Any(r => r.Worn) ? NearbyHint.Worn : NearbyHint.Nearby;
+            }
+        }
+        internal BatteryReading ForTarget(AudioTarget target) { return ForTarget(target, true); }
+
+        // infer: allow creating an automatic lock. Hint-only callers pass false so a
+        // query never changes what the battery display trusts.
+        private BatteryReading ForTarget(AudioTarget target, bool infer)
         {
             if (target == null) return null;
             Guid container;
@@ -868,27 +961,39 @@ namespace Karmac
                     if (authorized.Address != null && identity.ClassicAddress == authorized.Address && authorized.Model == identity.Model && reading.Model == identity.Model)
                         return reading.WithSource("AirPods advertised paired device identity");
                 }
-                ManualSource manual;
+                SourceLock held;
                 BatteryReading chosen;
-                if (manualSources.TryGetValue(container.ToString(), out manual))
+                if (locks.TryGetValue(container.ToString(), out held))
                 {
-                    if (DateTime.UtcNow - manual.Selected < TimeSpan.FromMinutes(30) &&
-                        String.Equals(manual.TargetAddress, authorized.Address, StringComparison.OrdinalIgnoreCase) &&
-                        readings.TryGetValue(manual.Address, out chosen) && chosen.Fresh && chosen.Model == manual.Model &&
+                    if (readings.TryGetValue(held.Address, out chosen)) FollowRotation(held, chosen);
+                    if (String.Equals(held.TargetAddress, authorized.Address, StringComparison.OrdinalIgnoreCase) &&
+                        readings.TryGetValue(held.Address, out chosen) && chosen.Fresh && chosen.Model == held.Model &&
                         (authorized.Model == 0 || authorized.Model == chosen.Model))
-                    {
-                        var value = chosen.WithSource("User-selected BLE broadcast; device identity is not verified");
-                        value.UserSelected = true;
-                        return value;
-                    }
-                    manualSources.Remove(container.ToString());
+                        return Locked(chosen, held.UserSelected);
+                    // A lock survives brief gaps; drop it only once its broadcast has been
+                    // gone long enough (3 min) to be unrecoverable.
+                    if (!readings.ContainsKey(held.Address)) locks.Remove(container.ToString());
+                    else return null;
                 }
-                return null;
+                var inferred = infer && authorized.Connected ? InferSource(authorized) : null;
+                return inferred == null ? null : Locked(inferred, false);
             }
+        }
+        private static BatteryReading Locked(BatteryReading reading, bool userSelected)
+        {
+            var value = reading.WithSource(userSelected ? "User-selected BLE broadcast; device identity is not verified" :
+                "Matched automatically: the only nearby broadcast of this model while your pair was connected");
+            value.UserSelected = userSelected; value.Inferred = !userSelected;
+            return value;
         }
         public void Dispose()
         {
-            lock (gate) disposed = true;
+            lock (gate)
+            {
+                disposed = true;
+                foreach (var deviceWatcher in batteryWatchers.Values) StopWatcher(deviceWatcher);
+                batteryWatchers.Clear();
+            }
             if (watcher != null) { try { watcher.Stop(); } catch { } watcher.Received -= Received; }
         }
     }

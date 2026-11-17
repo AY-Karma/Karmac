@@ -49,7 +49,8 @@ try {
     $arguments = @('/nologo', '/codepage:65001', '/target:exe', '/platform:x64', '/optimize+',
         '/main:Karmac.Tests.HardwareCheck', '/out:artifacts\Karmac.HardwareCheck.exe')
     $arguments += $refs | ForEach-Object { '/r:' + $_ }
-    $arguments += @('src\NativeAudio.cs', 'src\BluetoothTelemetry.cs', 'src\Infrastructure.cs', 'tests\HardwareCheck.cs')
+    $arguments += @('src\NativeAudio.cs', 'src\BluetoothTelemetry.cs', 'src\Infrastructure.cs', 'src\ConnectionFlow.cs',
+        'src\DeviceEvents.cs', 'tests\HardwareCheck.cs')
     & $compiler @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Hardware check compilation failed.' }
 

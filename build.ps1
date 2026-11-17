@@ -43,7 +43,7 @@ Write-Host ('Built {0} ({1:N0} KB)' -f $exe.FullName, ($exe.Length / 1KB))
 if ($Test) {
   $testArguments = @('/nologo','/codepage:65001','/target:exe','/platform:x64','/out:artifacts\Karmac.Tests.exe','/main:Karmac.Tests.Program')
   $testArguments += $refs | ForEach-Object { '/r:' + $_ }
-  $testArguments += @('src\NativeAudio.cs','src\BluetoothTelemetry.cs','src\Infrastructure.cs','src\ConnectionFlow.cs','tests\Program.cs')
+  $testArguments += @('src\NativeAudio.cs','src\BluetoothTelemetry.cs','src\Infrastructure.cs','src\ConnectionFlow.cs','src\DeviceEvents.cs','tests\Program.cs')
   & $compiler @testArguments
   if ($LASTEXITCODE -ne 0) { throw 'Test compilation failed.' }
   & .\artifacts\Karmac.Tests.exe

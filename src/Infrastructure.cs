@@ -35,8 +35,16 @@ namespace Karmac
         public bool RouteAudio { get; set; }
         public bool CloseToTray { get; set; }
         public bool Hotkey { get; set; }
-        public bool PowerOffBluetoothOnDisconnect { get; set; }
-        public Preferences() { RouteAudio = true; CloseToTray = true; Hotkey = true; PowerOffBluetoothOnDisconnect = true; }
+        // Move media output to the pair when it connects by itself (case opened, handed over).
+        public bool SwitchWhenConnected { get; set; }
+        // Quiet tray notifications: connected, low battery, case opened nearby.
+        public bool Notifications { get; set; }
+        // Settings files written by older versions may hold keys that no longer exist
+        // (laptop-wide Bluetooth power-off, pause on removal); loading ignores them.
+        public Preferences()
+        {
+            RouteAudio = true; CloseToTray = true; Hotkey = true; SwitchWhenConnected = true; Notifications = true;
+        }
         internal static readonly string Folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Karmac");
         // Read the old portable app's data as a fallback; all future writes use Karmac.
         internal static readonly string LegacyFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenConnect");
@@ -76,8 +84,13 @@ namespace Karmac
                 {
                     Directory.CreateDirectory(Preferences.Folder);
                     string path = Path.Combine(Preferences.Folder, "app.log");
+                    // Rotate rather than truncate, so recent history survives a busy session.
                     if (File.Exists(path) && new FileInfo(path).Length > 256 * 1024)
-                        File.WriteAllText(path, "");
+                    {
+                        string previous = Path.Combine(Preferences.Folder, "app.1.log");
+                        if (File.Exists(previous)) File.Delete(previous);
+                        File.Move(path, previous);
+                    }
                     File.AppendAllText(path, DateTime.UtcNow.ToString("u") + " " + message + Environment.NewLine);
                 }
             }

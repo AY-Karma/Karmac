@@ -15,6 +15,11 @@ namespace Karmac
         public int State;
         public int Flow;
         public bool Active { get { return State == 1; } }
+        public bool Render { get { return Flow == 0; } }
+        // Hands-Free (HFP/HSP) is the 16 kHz mono call profile. Stereo media (A2DP)
+        // must never be confused with it, so classify by driver path first
+        // (locale-independent) and fall back to the endpoint name.
+        public bool HandsFree { get { return AudioService.IsHandsFreeEndpoint(ControllerId, Name); } }
     }
 
     internal sealed class AudioTarget
@@ -29,7 +34,13 @@ namespace Karmac
         public bool IsApple;
         public int? Battery;
         public List<AudioEndpoint> Endpoints = new List<AudioEndpoint>();
-        public bool Connected { get { return Endpoints.Any(e => e.Flow == 0 && e.Active); } }
+        // Any playback profile is active (stereo or calls-only).
+        public bool Connected { get { return Endpoints.Any(e => e.Render && e.Active); } }
+        public bool StereoActive { get { return Endpoints.Any(e => e.Render && e.Active && !e.HandsFree); } }
+        public bool HasStereoEndpoint { get { return Endpoints.Any(e => e.Render && !e.HandsFree); } }
+        // Ready for media: stereo is active, or the device has no stereo profile at all.
+        public bool PlaybackReady { get { return StereoActive || (Connected && !HasStereoEndpoint); } }
+        public bool CallsOnly { get { return Connected && !PlaybackReady; } }
         public bool IsDefault;
         public override string ToString() { return Name; }
     }
@@ -226,33 +237,79 @@ namespace Karmac
 
         // IPolicyConfig is a longstanding, undocumented Windows desktop interface.
         // Always verify the resulting role assignments; report routing failures separately.
+        // Media roles (console, multimedia) only ever receive the stereo endpoint. The
+        // communications role gets the Hands-Free endpoint when it is live, so calls keep
+        // the headset microphone; otherwise it follows the stereo endpoint.
         internal static string Route(AudioTarget target)
         {
-            var render = target.Endpoints.Where(e => e.Flow == 0 && e.Active)
-                .OrderBy(e => IsHandsFree(e.Name) ? 1 : 0).FirstOrDefault();
-            if (render == null) throw new InvalidOperationException("The AirPods playback endpoint is not active yet.");
+            var stereo = target.Endpoints.FirstOrDefault(e => e.Render && e.Active && !e.HandsFree);
+            if (stereo == null && target.HasStereoEndpoint)
+                throw new InvalidOperationException("Stereo audio isn't active yet, so Windows output was left unchanged rather than using the low-quality call profile.");
+            var media = stereo ?? target.Endpoints.FirstOrDefault(e => e.Render && e.Active);
+            if (media == null) throw new InvalidOperationException("The headphone playback endpoint is not active yet.");
+            var calls = target.Endpoints.FirstOrDefault(e => e.Render && e.Active && e.HandsFree) ?? media;
+            SetDefault(media.Id, calls.Id);
+            return media.Id;
+        }
+
+        // Sets console + multimedia to mediaId and communications to callsId, then verifies.
+        internal static void SetDefault(string mediaId, string callsId)
+        {
+            callsId = callsId ?? mediaId;
             object policyObject = new PolicyConfigClient();
             try
             {
                 var policy = (IPolicyConfig)policyObject;
-                Check(policy.SetDefaultEndpoint(render.Id, 0));
-                Check(policy.SetDefaultEndpoint(render.Id, 1));
-                Check(policy.SetDefaultEndpoint(render.Id, 2));
+                Check(policy.SetDefaultEndpoint(mediaId, 0));
+                Check(policy.SetDefaultEndpoint(mediaId, 1));
+                Check(policy.SetDefaultEndpoint(callsId, 2));
             }
             finally { Release(policyObject); }
             var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
             try
             {
+                string[] expected = { mediaId, mediaId, callsId };
                 for (int role = 0; role <= 2; role++)
-                    if (!String.Equals(DefaultId(enumerator, role), render.Id, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("Windows has not confirmed the default audio route. Try Route audio again.");
+                    if (!String.Equals(DefaultId(enumerator, role), expected[role], StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("Windows has not confirmed the default audio route. Try switching audio again.");
             }
             finally { Release(enumerator); }
-            return render.Id;
         }
 
-        private static bool IsHandsFree(string name)
+        internal sealed class OutputSnapshot { internal string Media, Calls; }
+
+        // The current default render endpoints, captured before switching so the
+        // user can return to them later ("Switch back").
+        internal static OutputSnapshot CurrentOutput()
         {
+            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            try { return new OutputSnapshot { Media = DefaultId(enumerator, 1), Calls = DefaultId(enumerator, 2) }; }
+            finally { Release(enumerator); }
+        }
+
+        internal static bool IsActiveEndpoint(string id)
+        {
+            if (String.IsNullOrEmpty(id)) return false;
+            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            IMMDevice device = null;
+            try
+            {
+                int state;
+                return enumerator.GetDevice(id, out device) >= 0 && device.GetState(out state) >= 0 && state == 1;
+            }
+            finally { Release(device); Release(enumerator); }
+        }
+
+        internal static bool IsHandsFreeEndpoint(string controllerId, string name)
+        {
+            if (controllerId != null)
+            {
+                // bthhfenum = Windows Hands-Free enumerator; 111E/111F = HFP, 1108/1112 = HSP.
+                foreach (string marker in new[] { "bthhfenum", "{0000111e-", "{0000111f-", "{00001108-", "{00001112-" })
+                    if (controllerId.IndexOf(marker, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                // 110B = A2DP Audio Sink.
+                if (controllerId.IndexOf("{0000110b-", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            }
             return name != null && (name.IndexOf("hands-free", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 name.IndexOf("handsfree", StringComparison.OrdinalIgnoreCase) >= 0);
         }
@@ -292,8 +349,17 @@ namespace Karmac
         [PreserveSig] int EnumAudioEndpoints(int flow, uint mask, out IMMDeviceCollection devices);
         [PreserveSig] int GetDefaultAudioEndpoint(int flow, int role, out IMMDevice device);
         [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
-        [PreserveSig] int RegisterEndpointNotificationCallback(IntPtr callback);
-        [PreserveSig] int UnregisterEndpointNotificationCallback(IntPtr callback);
+        [PreserveSig] int RegisterEndpointNotificationCallback(IMMNotificationClient callback);
+        [PreserveSig] int UnregisterEndpointNotificationCallback(IMMNotificationClient callback);
+    }
+    [ComImport, Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IMMNotificationClient
+    {
+        [PreserveSig] int OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string id, int state);
+        [PreserveSig] int OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnDefaultDeviceChanged(int flow, int role, [MarshalAs(UnmanagedType.LPWStr)] string id);
+        [PreserveSig] int OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string id, PropertyKey key);
     }
     [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IMMDeviceCollection

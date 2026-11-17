@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Devices.Radios;
 
@@ -41,14 +42,9 @@ namespace Karmac.Tests
             Run("Bluetooth access denial cannot reach the connection step", BluetoothAccessDenied);
             Run("Missing or disabled Bluetooth cannot request a radio change", BluetoothUnavailable);
             Run("Bluetooth adapter refusal and transition timeout are reported", BluetoothEnableFailure);
-            Run("Already-off Bluetooth does not request access or write radio state", BluetoothAlreadyOff);
-            Run("Bluetooth power-off disables every active adapter before completion", BluetoothDisableAll);
-            Run("Bluetooth power-off access denial cannot report success", BluetoothDisableAccessDenied);
-            Run("Bluetooth power-off reports adapter refusal and continues other adapters", BluetoothDisableRefusal);
-            Run("Bluetooth power-off timeout and unknown state cannot report success", BluetoothDisableFailure);
             Run("Restoring audio driver errors remain distinguishable from permanent failures", TransientBluetoothDriverErrors);
             Run("Saved pair survives serialization as an unverified cold-start hint", SavedPairCache);
-            Run("Disconnect preferences preserve the default for existing settings and explicit user choices", DisconnectPreferences);
+            Run("Settings from older versions load without the removed power-off and pause options", DisconnectPreferences);
             Run("Karmac settings preserve legacy preferences without overriding new settings", RenamedPreferences);
             Run("Cold connection restores endpoints and retries accepted requests until playback is active", ColdConnectionFlow);
             Run("Restoring-driver failures do not exhaust actual reconnect attempts", RestoringDriverBudget);
@@ -68,9 +64,6 @@ namespace Karmac.Tests
             Run("Automatic identity requires its authorized container and model", AuthorizedIdentity);
             Run("Rotating BLE addresses require their own current identity proof", RotatedIdentity);
             Run("Device battery readings retain container scope and freshness", DeviceBatteryScope);
-            Run("Manual battery source requires explicit authorized selection", ManualBatterySource);
-            Run("Verified battery identity takes precedence over a manual source", VerifiedBeforeManual);
-            Run("Manual battery source expires without rebinding rotated addresses", ManualSourceExpiry);
             Run("Stale readings cannot match identity or appear nearby", StaleReadings);
             Run("Nearby candidates enforce the RSSI cutoff and sort by signal", NearbyCandidates);
             Run("Empty caches and missing targets remain unknown", EmptyCache);
@@ -93,12 +86,13 @@ namespace Karmac.Tests
             System.IO.Directory.CreateDirectory(current);
             System.IO.Directory.CreateDirectory(legacy);
             string legacyPath = System.IO.Path.Combine(legacy, "settings.json");
-            const string oldSettings = "{\"Hotkey\":false,\"PowerOffBluetoothOnDisconnect\":false}";
+            const string oldSettings = "{\"Hotkey\":false,\"PowerOffBluetoothOnDisconnect\":true}";
             try
             {
                 System.IO.File.WriteAllText(legacyPath, oldSettings);
                 var restored = Preferences.LoadFromFolders(current, legacy);
-                Assert(!restored.Hotkey && !restored.PowerOffBluetoothOnDisconnect, "Legacy choices survive the rename");
+                Assert(!restored.Hotkey && restored.RouteAudio && restored.SwitchWhenConnected,
+                    "Legacy choices survive the rename and the removed power-off key is ignored");
                 Assert(!System.IO.File.Exists(System.IO.Path.Combine(current, "settings.json")), "Reading does not create or overwrite settings");
                 System.IO.File.WriteAllText(System.IO.Path.Combine(current, "settings.json"), "{\"Hotkey\":true}");
                 Assert(Preferences.LoadFromFolders(current, legacy).Hotkey, "Karmac settings take precedence");
@@ -163,20 +157,12 @@ namespace Karmac.Tests
             public RadioAccessStatus Result = RadioAccessStatus.Allowed;
             public bool CompleteTransition = true;
             public int Calls;
-            public int OffCalls;
             public RadioState State { get { return Current; } }
             public async Task<RadioAccessStatus> TurnOnAsync()
             {
                 Calls++;
                 if (Result == RadioAccessStatus.Allowed && CompleteTransition)
                 { await Task.Delay(10); Current = RadioState.On; }
-                return Result;
-            }
-            public async Task<RadioAccessStatus> TurnOffAsync()
-            {
-                OffCalls++;
-                if (Result == RadioAccessStatus.Allowed && CompleteTransition)
-                { await Task.Delay(10); Current = RadioState.Off; }
                 return Result;
             }
         }
@@ -244,82 +230,6 @@ namespace Karmac.Tests
                 && fallback.State == RadioState.On, "Another Bluetooth adapter can succeed if the first refuses");
         }
 
-        private static void BluetoothAlreadyOff()
-        {
-            foreach (var radios in new[] { new IBluetoothRadio[0], new IBluetoothRadio[] {
-                new FakeRadio { Current = RadioState.Off }, new FakeRadio { Current = RadioState.Disabled } } })
-            {
-                int access = 0;
-                bool changed = BluetoothPower.EnsureOffAsync(radios,
-                    () => { access++; return Task.FromResult(RadioAccessStatus.Allowed); },
-                    () => { throw new InvalidOperationException("No transition should start"); }, 200).GetAwaiter().GetResult();
-                Assert(!changed && access == 0, "No adapter already off requires permission or a transition");
-                Assert(radios.Cast<FakeRadio>().All(r => r.OffCalls == 0 && r.Calls == 0), "Already-off adapters are untouched");
-            }
-        }
-
-        private static void BluetoothDisableAll()
-        {
-            var first = new FakeRadio { Current = RadioState.On };
-            var second = new FakeRadio { Current = RadioState.On };
-            var off = new FakeRadio { Current = RadioState.Off };
-            bool starting = false;
-            int access = 0;
-            bool changed = BluetoothPower.EnsureOffAsync(new IBluetoothRadio[] { first, off, second },
-                () => { Assert(starting && first.OffCalls == 0 && second.OffCalls == 0, "Progress and access precede all power-off requests"); access++; return Task.FromResult(RadioAccessStatus.Allowed); },
-                () => starting = true, 200).GetAwaiter().GetResult();
-            Assert(changed && access == 1, "One access check covers all Bluetooth adapters");
-            Assert(first.Current == RadioState.Off && second.Current == RadioState.Off,
-                "Success confirms every initially active adapter is off");
-            Assert(first.OffCalls == 1 && second.OffCalls == 1 && off.OffCalls == 0,
-                "Every active adapter is disabled once; already-off adapters are untouched");
-            Assert(first.Calls == 0 && second.Calls == 0 && off.Calls == 0, "Disconnect never turns an adapter on");
-        }
-
-        private static void BluetoothDisableAccessDenied()
-        {
-            foreach (var status in new[] { RadioAccessStatus.DeniedByUser, RadioAccessStatus.DeniedBySystem, RadioAccessStatus.Unspecified })
-            {
-                var radio = new FakeRadio { Current = RadioState.On };
-                bool failed = false;
-                try { BluetoothPower.EnsureOffAsync(new IBluetoothRadio[] { radio }, () => Task.FromResult(status), null, 0).GetAwaiter().GetResult(); }
-                catch (InvalidOperationException error) { failed = error.Message.Contains(status.ToString()); }
-                Assert(failed && radio.OffCalls == 0 && radio.Current == RadioState.On,
-                    "Denied radio access cannot claim Bluetooth was disabled: " + status);
-            }
-        }
-
-        private static void BluetoothDisableRefusal()
-        {
-            var denied = new FakeRadio { Current = RadioState.On, Result = RadioAccessStatus.DeniedBySystem };
-            var allowed = new FakeRadio { Current = RadioState.On };
-            bool failed = false;
-            try { BluetoothPower.EnsureOffAsync(new IBluetoothRadio[] { denied, allowed },
-                () => Task.FromResult(RadioAccessStatus.Allowed), null, 200).GetAwaiter().GetResult(); }
-            catch (InvalidOperationException error) { failed = error.Message.Contains("DeniedBySystem"); }
-            Assert(failed && denied.OffCalls == 1 && denied.Current == RadioState.On,
-                "One refused adapter prevents a false laptop-wide off result");
-            Assert(allowed.OffCalls == 1 && allowed.Current == RadioState.Off,
-                "A refused adapter does not stop disabling the remaining adapters");
-        }
-
-        private static void BluetoothDisableFailure()
-        {
-            var stalled = new FakeRadio { Current = RadioState.On, CompleteTransition = false };
-            bool failed = false;
-            try { BluetoothPower.EnsureOffAsync(new IBluetoothRadio[] { stalled },
-                () => Task.FromResult(RadioAccessStatus.Allowed), null, 0).GetAwaiter().GetResult(); }
-            catch (TimeoutException) { failed = true; }
-            Assert(failed && stalled.OffCalls == 1 && stalled.Current == RadioState.On,
-                "An accepted request without an off transition cannot report success");
-            var unknown = new FakeRadio { Current = RadioState.Unknown };
-            failed = false;
-            try { BluetoothPower.EnsureOffAsync(new IBluetoothRadio[] { unknown },
-                () => { throw new InvalidOperationException("No active adapter needs a write"); }, null, 0).GetAwaiter().GetResult(); }
-            catch (InvalidOperationException error) { failed = error.Message.Contains("confirm"); }
-            Assert(failed && unknown.OffCalls == 0, "An unknown adapter state cannot be reported as off");
-        }
-
         private static void TransientBluetoothDriverErrors()
         {
             foreach (uint code in new uint[] { 0x80070003, 0x80070002, 0x80070490 })
@@ -339,10 +249,11 @@ namespace Karmac.Tests
             internal bool PowerChanged = true;
             internal readonly List<string> Calls = new List<string>();
             public Task<bool> PowerOnAsync(Action starting) { Calls.Add("power"); if (PowerChanged) starting(); return Task.FromResult(PowerChanged); }
-            public Task PowerOffAsync() { return Task.FromResult(true); }
-            public Task DisconnectAsync(AudioTarget target) { foreach (var endpoint in target.Endpoints) endpoint.State = 8; return Task.FromResult(true); }
             public Task<string> ReadRadioStateAsync() { return Task.FromResult("On"); }
-            public Task VerifyPairAsync(AudioTarget target)
+            public Task<bool?> ReadLinkAsync(AudioTarget target, CancellationToken token) { return Task.FromResult<bool?>(null); }
+            public Task PageAsync(AudioTarget target, CancellationToken token) { return Task.FromResult(true); }
+            public NearbyHint Nearby(AudioTarget target) { return NearbyHint.Unknown; }
+            public Task VerifyPairAsync(AudioTarget target, CancellationToken token)
             {
                 Calls.Add("verify");
                 if (RejectPair) throw new InvalidOperationException("Pair removed");
@@ -362,21 +273,28 @@ namespace Karmac.Tests
                 foreach (var endpoint in target.Endpoints) endpoint.State = AlreadyActive || Requests >= ConnectOnRequest ? 1 : 8;
                 return Task.FromResult(true);
             }
-            public Task RequestAsync(AudioTarget target)
+            public Task RequestAsync(AudioTarget target, bool connect)
             {
+                if (!connect) { foreach (var endpoint in target.Endpoints) endpoint.State = 8; return Task.FromResult(true); }
                 Assert(Verified && target.Endpoints.Count > 0, "Only the verified saved pair receives audio requests");
                 Requests++; Calls.Add("request");
                 if ((TransientFirst && Requests == 1) || Requests <= TransientFailures)
                     throw new InvalidOperationException("Restoring", new COMException("Path missing", unchecked((int)0x80070003)));
                 return Task.FromResult(true);
             }
-            public Task RouteAsync(AudioTarget target)
+            public Task<AudioService.OutputSnapshot> RouteAsync(AudioTarget target)
             {
                 Assert(target.Connected, "Output is never routed before playback is active");
                 Calls.Add("route"); Routes++; if (FailRoute) throw new InvalidOperationException("Output denied");
-                return Task.FromResult(true);
+                return Task.FromResult<AudioService.OutputSnapshot>(null);
             }
-            public Task DelayAsync(int milliseconds) { return Task.Delay(milliseconds); }
+            public Task DelayAsync(int milliseconds, CancellationToken token) { return Task.Delay(milliseconds, token); }
+        }
+        // Real retry/page cadence, compressed to keep the suite fast.
+        private static ConnectionOptions Fast(int timeout)
+        {
+            return new ConnectionOptions { TimeoutMs = timeout, TakeoverTimeoutMs = timeout, PollMs = 1,
+                LinkDownRetryMs = 5, LinkUpRetryMs = 5, UnknownLinkRetryMs = 5, StereoGraceMs = 50 };
         }
         private static AudioTarget SavedFixture()
         {
@@ -385,16 +303,16 @@ namespace Karmac.Tests
         private static void DisconnectPreferences()
         {
             var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-            Assert(new Preferences().PowerOffBluetoothOnDisconnect, "New installations keep laptop-wide Bluetooth power-off as the default");
-            var legacy = serializer.Deserialize<Preferences>("{\"RouteAudio\":false,\"CloseToTray\":true,\"Hotkey\":false}");
-            Assert(legacy.PowerOffBluetoothOnDisconnect, "Settings saved before the disconnect option retain laptop-wide power-off");
-            Assert(!legacy.RouteAudio && !legacy.Hotkey && legacy.CloseToTray, "Migrating the disconnect default preserves other settings");
-            foreach (bool choice in new[] { false, true })
-            {
-                var saved = new Preferences { PowerOffBluetoothOnDisconnect = choice };
-                var restored = serializer.Deserialize<Preferences>(serializer.Serialize(saved));
-                Equal(choice, restored.PowerOffBluetoothOnDisconnect, "The user's disconnect behavior survives a settings round trip");
-            }
+            // Files from older versions can hold the removed laptop-wide power-off and
+            // pause-on-removal keys. They must load, keep every other choice, and the
+            // removed keys must not come back when the file is saved again.
+            var legacy = serializer.Deserialize<Preferences>("{\"RouteAudio\":false,\"CloseToTray\":true,\"Hotkey\":false," +
+                "\"PowerOffBluetoothOnDisconnect\":true,\"PauseWhenRemoved\":true,\"SettingsVersion\":2}");
+            Assert(!legacy.RouteAudio && !legacy.Hotkey && legacy.CloseToTray && legacy.SwitchWhenConnected,
+                "Settings written by older versions load and keep the user's other choices");
+            string saved = serializer.Serialize(legacy);
+            Assert(saved.IndexOf("PowerOff", StringComparison.Ordinal) < 0 && saved.IndexOf("PauseWhenRemoved", StringComparison.Ordinal) < 0,
+                "Removed settings are dropped when preferences are saved again");
         }
         private static void SavedPairCache()
         {
@@ -417,7 +335,7 @@ namespace Karmac.Tests
                 var backend = new FakeConnectionPlatform { TransientFirst = transient };
                 var target = SavedFixture(); target.RequiresPairingCheck = true;
                 var trace = new ConnectionTrace(false);
-                bool already = new ConnectionFlow(backend, 1500, 5, 1).ConnectAsync(target, true, false, trace).GetAwaiter().GetResult();
+                bool already = new ConnectionFlow(backend, Fast(1500)).ConnectAsync(target, true, false, trace, CancellationToken.None).GetAwaiter().GetResult().AlreadyConnected;
                 Assert(!already && target.Connected && target.IsDefault && backend.Requests == 2 && backend.Refreshes >= 2,
                     "Cold endpoint absence and an accepted-but-inactive first request recover in one action");
                 Assert(backend.Calls[0] == "power" && backend.Calls[1] == "verify" && backend.Routes == 1,
@@ -431,11 +349,11 @@ namespace Karmac.Tests
             var backend = new FakeConnectionPlatform { AlreadyActive = true, EndpointOnRefresh = 1, PowerChanged = false };
             var target = SavedFixture();
             var trace = new ConnectionTrace(false);
-            Assert(new ConnectionFlow(backend).ConnectAsync(target, false, true, trace).GetAwaiter().GetResult() && backend.Requests == 0 && backend.Routes == 1,
+            Assert(new ConnectionFlow(backend).ConnectAsync(target, false, true, trace, CancellationToken.None).GetAwaiter().GetResult().AlreadyConnected && backend.Requests == 0 && backend.Routes == 1,
                 "Explicit output switch verifies routing without issuing another reconnect");
             backend = new FakeConnectionPlatform { AlreadyActive = true, EndpointOnRefresh = 1 };
             target = SavedFixture(); trace = new ConnectionTrace(false);
-            new ConnectionFlow(backend).ConnectAsync(target, false, false, trace).GetAwaiter().GetResult();
+            new ConnectionFlow(backend).ConnectAsync(target, false, false, trace, CancellationToken.None).GetAwaiter().GetResult();
             Assert(backend.Routes == 0 && trace.Steps[3].State == ConnectionStepState.Skipped && !target.IsDefault,
                 "Disabled automatic routing is shown as skipped rather than falsely verified");
         }
@@ -443,7 +361,7 @@ namespace Karmac.Tests
         {
             var backend = new FakeConnectionPlatform { EndpointOnRefresh = 1, TransientFailures = 6, ConnectOnRequest = 8 };
             var target = SavedFixture(); var trace = new ConnectionTrace(false);
-            new ConnectionFlow(backend, 1500, 5, 1).ConnectAsync(target, true, false, trace).GetAwaiter().GetResult();
+            new ConnectionFlow(backend, Fast(3000)).ConnectAsync(target, true, false, trace, CancellationToken.None).GetAwaiter().GetResult();
             Assert(target.Connected && target.IsDefault && backend.Requests == 8 && !trace.Failed,
                 "Transient driver restoration cannot spend the accepted-reconnect budget before the radio is usable");
         }
@@ -452,7 +370,7 @@ namespace Karmac.Tests
             var backend = new FakeConnectionPlatform { RejectPair = true };
             var trace = new ConnectionTrace(false);
             bool failed = false;
-            try { new ConnectionFlow(backend).ConnectAsync(SavedFixture(), true, false, trace).GetAwaiter().GetResult(); }
+            try { new ConnectionFlow(backend).ConnectAsync(SavedFixture(), true, false, trace, CancellationToken.None).GetAwaiter().GetResult(); }
             catch (InvalidOperationException) { failed = true; }
             Assert(failed && backend.Requests == 0 && backend.Refreshes == 0 && backend.Routes == 0,
                 "A removed or unconfirmed bond cannot receive a reconnect request");
@@ -464,10 +382,10 @@ namespace Karmac.Tests
             var backend = new FakeConnectionPlatform { ConnectOnRequest = Int32.MaxValue, EndpointOnRefresh = 1 };
             var target = SavedFixture(); var trace = new ConnectionTrace(false);
             bool timedOut = false;
-            try { new ConnectionFlow(backend, 60, 5, 1).ConnectAsync(target, true, false, trace).GetAwaiter().GetResult(); }
+            try { new ConnectionFlow(backend, Fast(60)).ConnectAsync(target, true, false, trace, CancellationToken.None).GetAwaiter().GetResult(); }
             catch (TimeoutException) { timedOut = true; }
-            Assert(timedOut && !target.Connected && !target.IsDefault && backend.Requests > 1 && backend.Requests <= 4 && backend.Routes == 0,
-                "Bounded retries cannot claim a refused handoff succeeded");
+            Assert(timedOut && !target.Connected && !target.IsDefault && backend.Requests > 1 && backend.Routes == 0,
+                "Retrying for the whole budget still cannot claim a refused handoff succeeded");
             Assert(trace.Steps[2].State == ConnectionStepState.Failed && trace.Steps[3].State == ConnectionStepState.Pending,
                 "Failed audio does not complete the Windows-output stage");
         }
@@ -476,7 +394,7 @@ namespace Karmac.Tests
             var backend = new FakeConnectionPlatform { AlreadyActive = true, EndpointOnRefresh = 1, FailRoute = true };
             var target = SavedFixture(); var trace = new ConnectionTrace(false);
             bool failed = false;
-            try { new ConnectionFlow(backend).ConnectAsync(target, true, false, trace).GetAwaiter().GetResult(); }
+            try { new ConnectionFlow(backend).ConnectAsync(target, true, false, trace, CancellationToken.None).GetAwaiter().GetResult(); }
             catch (InvalidOperationException) { failed = true; }
             Assert(failed && target.Connected && !target.IsDefault && trace.Steps[2].State == ConnectionStepState.Complete && trace.Steps[3].State == ConnectionStepState.Failed,
                 "A route failure keeps real connectivity while exposing the failed output stage");
@@ -690,34 +608,34 @@ namespace Karmac.Tests
 
         private static void AppleAudioCatalog()
         {
-            int[] expanded = { 0x2036, 0x2030, 0x202D, 0x2003, 0x2005, 0x2006, 0x2009,
-                0x200B, 0x200C, 0x200D, 0x2010, 0x2011, 0x2012, 0x2016, 0x2017, 0x201D, 0x2025, 0x2026, 0x2038 };
-            string[] keys = { "airpods-5", "airpods-5-wireless", "airpods-max-2", "powerbeats-3", "beats-x", "beats-solo-3", "beats-studio-3",
-                "powerbeats-pro", "beats-solo-pro", "powerbeats-4", "beats-flex", "beats-studio-buds", "beats-fit-pro", "beats-studio-buds-plus",
-                "beats-studio-pro", "powerbeats-pro-2", "beats-solo-4", "beats-solo-buds", "beats-360" };
+            int[] expanded = { 0x2036, 0x2030, 0x202D };
+            string[] keys = { "airpods-5", "airpods-5-wireless", "airpods-max-2" };
             for (int i = 0; i < expanded.Length; i++)
             {
                 int model = expanded[i];
-                Assert(AirPodsModels.IsKnown(model), "Current or legacy Apple wireless audio identity recognized " + model.ToString("X4"));
+                Assert(AirPodsModels.IsKnown(model), "Current AirPods identity recognized " + model.ToString("X4"));
                 Equal(keys[i], AirPodsModels.ArtworkKey(model), "Each product has a stable distinct artwork key");
                 Assert(!BatteryMonitor.IsSupportedModel(model), "Catalog growth does not enable an unvalidated battery decoder");
                 Assert(BatteryMonitor.Parse(Packet((ushort)model, 0x20, 0x99, 0x09)) == null,
-                    "Unvalidated headset formats cannot become invented three-part battery readings");
+                    "Unvalidated formats cannot become invented three-part battery readings");
             }
             Equal(AirPodsModels.KnownIds.Length, AirPodsModels.KnownIds.Select(AirPodsModels.ArtworkKey).Distinct().Count(), "All known product artwork keys are unique");
+            Assert(AirPodsModels.KnownIds.All(id => AirPodsModels.Name(id).StartsWith("AirPods", StringComparison.Ordinal)), "The catalog is AirPods only");
             Equal("AirPods 5", AirPodsModels.Name(0x2036), "AirPods 5 identity");
             Equal("AirPods Max 2", AirPodsModels.Name(0x202D), "AirPods Max 2 identity");
-            Equal("Powerbeats Pro 2", AirPodsModels.Name(0x201D), "Powerbeats Pro 2 identity");
-            foreach (int model in new[] { 0x200A, 0x201F, 0x202D, 0x2006, 0x2009, 0x200C, 0x2017, 0x2025, 0x2038 })
+            foreach (int model in new[] { 0x2003, 0x2005, 0x200B, 0x2012, 0x2017, 0x2026, 0x2038 })
             {
-                Assert(AirPodsModels.IsOverEar(model), "Headphone layout recognized " + model.ToString("X4"));
-                Equal("single", AirPodsModels.ComponentLayout(model), "Headphones expose one device battery, not left/right/case");
+                Assert(!AirPodsModels.IsKnown(model) && AirPodsModels.IsBeats(model), "Beats product " + model.ToString("X4") + " is not in the AirPods catalog");
+                Assert(!DeviceDiscovery.IsAppleAudioHardwareId(@"BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}_VID&0001004c_PID&" + model.ToString("X4"), true),
+                    "Paired Beats " + model.ToString("X4") + " are not offered even with audio endpoints");
             }
-            foreach (int model in new[] { 0x2003, 0x2005, 0x200D, 0x2010 })
-                Equal("single", AirPodsModels.ComponentLayout(model), "Neckband earphones expose one device battery");
-            foreach (int model in new[] { 0x2002, 0x2036, 0x2030, 0x2027, 0x200B, 0x201D, 0x2012, 0x2011, 0x2016 })
+            foreach (int model in new[] { 0x200A, 0x201F, 0x202D })
+            {
+                Assert(AirPodsModels.IsOverEar(model), "AirPods Max layout recognized " + model.ToString("X4"));
+                Equal("single", AirPodsModels.ComponentLayout(model), "Over-ear AirPods expose one device battery, not left/right/case");
+            }
+            foreach (int model in new[] { 0x2002, 0x2036, 0x2030, 0x2027, 0x200E, 0x2024 })
                 Equal("dual-case", AirPodsModels.ComponentLayout(model), "True wireless charging case layout");
-            Equal("dual", AirPodsModels.ComponentLayout(0x2026), "Solo Buds case has no battery to invent");
             Equal("single", AirPodsModels.ComponentLayout(0), "Unknown device does not invent component layout");
         }
 
@@ -940,70 +858,6 @@ namespace Karmac.Tests
                 Assert(monitor.GetDeviceBattery(target) == null, "Disconnected targets do not display cached device battery as live");
                 monitor.RegisterTargets(new AudioTarget[0]);
                 Assert(monitor.GetDeviceBattery(target) == null, "Snapshot revocation removes cached device battery");
-            }
-        }
-
-        private static void ManualBatterySource()
-        {
-            AudioTarget target = Target("001122334455");
-            BatteryReading nearby = Beacon(0xAABBCCDDEEFF, -30, 0);
-            BatteryReading far = Beacon(0x66778899AABB, -90, 0);
-            BatteryReading wrong = Beacon(0x112233445566, -25, 0); wrong.Model = 0x200E;
-            using (BatteryMonitor monitor = Cache(nearby, far, wrong))
-            {
-                Assert(!monitor.SelectSource(target, nearby.Address), "Unregistered target cannot receive a manual source");
-                monitor.RegisterTargets(new[] { target });
-                Assert(monitor.ForTarget(target) == null, "Nearby readable data still requires an explicit choice");
-                Equal(1, monitor.CandidatesForTarget(target).Count, "Chooser filters wrong models and weak signals");
-                Assert(!monitor.SelectSource(target, far.Address), "Weak source cannot be selected");
-                Assert(!monitor.SelectSource(target, wrong.Address), "Wrong model cannot be selected");
-                Assert(monitor.SelectSource(target, nearby.Address), "Explicit selection accepts a fresh matching nearby source");
-                var value = monitor.ForTarget(target);
-                Assert(value != null && value.Address == nearby.Address && value.UserSelected, "Returned reading is explicitly marked user-selected");
-                Assert(value.Source.Contains("not verified") && !nearby.UserSelected, "Unverified label is retained without mutating shared cache");
-                monitor.ClearSource(target);
-                Assert(monitor.ForTarget(target) == null, "Removing a manual source restores strict automatic identity matching");
-                Assert(monitor.SelectSource(target, nearby.Address), "Source can be selected again explicitly");
-                monitor.RegisterTargets(new AudioTarget[0]);
-                monitor.RegisterTargets(new[] { target });
-                Assert(monitor.ForTarget(target) == null, "Removing the paired target revokes its manual choice");
-            }
-        }
-
-        private static void VerifiedBeforeManual()
-        {
-            var own = Beacon(0x001122334455, -80, 1);
-            var other = Beacon(0xAABBCCDDEEFF, -20, 0);
-            var target = Target(own.AddressLabel);
-            using (BatteryMonitor monitor = Cache(own, other))
-            {
-                monitor.RegisterTargets(new[] { target });
-                Assert(monitor.SelectSource(target, other.Address), "Explicit source choice is accepted even if verified data is already cached");
-                var value = monitor.ForTarget(target);
-                Assert(value.Address == own.Address && !value.UserSelected, "Verified paired address outranks the selected nearby source");
-                own.Seen = DateTime.UtcNow.AddMinutes(-2);
-                Identity(monitor, other.Address, target.ContainerId, null, 0, 0);
-                Assert(!monitor.ForTarget(target).UserSelected, "Windows verified identity is never downgraded to user-selected");
-            }
-        }
-
-        private static void ManualSourceExpiry()
-        {
-            var first = Beacon(0xAABBCCDDEEFF, -30, 0);
-            var rotated = Beacon(0x66778899AABB, -20, 0);
-            var target = Target("001122334455");
-            using (BatteryMonitor monitor = Cache(first, rotated))
-            {
-                monitor.RegisterTargets(new[] { target });
-                monitor.SelectSource(target, first.Address);
-                first.Seen = DateTime.UtcNow.AddSeconds(-91);
-                Assert(monitor.ForTarget(target) == null, "Expired selected source does not switch to another same-model address");
-                first.Seen = DateTime.UtcNow;
-                Assert(monitor.ForTarget(target) == null, "Expired selection is revoked even if its old address returns");
-                monitor.SelectSource(target, first.Address);
-                target.Address = "112233445566";
-                monitor.RegisterTargets(new[] { target });
-                Assert(monitor.ForTarget(target) == null, "Changing the paired identity revokes the old source");
             }
         }
 
