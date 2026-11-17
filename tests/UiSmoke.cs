@@ -85,7 +85,7 @@ namespace Karmac.Tests
             Assert(((Grid)window.FindName("BatteryRow")).Visibility != Visibility.Visible, "No battery row without AirPods");
             Shot(window, "flyout-no-airpods");
 
-            var pro = Pair(controller, 0x2027, "Ayush's AirPods Pro", 0xAABBCC000027UL);
+            var pro = Pair(controller, 0x2027, "AirPods Pro", 0xAABBCC000027UL);
             Stage(controller, picker, new List<AudioTarget> { pro }, pro, "On");
             Assert(badge.Text == "Not connected" && toggle.IsVisible && toggle.IsChecked == false &&
                 (string)primary.Content == "Connect", "Disconnected pair offers Connect with the switch off");
