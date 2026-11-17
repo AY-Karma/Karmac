@@ -62,8 +62,8 @@ namespace Karmac.Tests
                 }
                 Check(Object.ReferenceEquals(AudioArtwork.LoadBundled("airpods-max-usbc").Source,
                     AudioArtwork.LoadBundled("airpods-max-lightning").Source), "Matching family renders share a decoded image");
-                Check(!Object.ReferenceEquals(AudioArtwork.LoadBundled("beats-solo-4").Source,
-                    AudioArtwork.LoadBundled("beats-studio-pro").Source), "Solo and Studio have distinct product silhouettes");
+                Check(!Object.ReferenceEquals(AudioArtwork.LoadBundled("airpods-pro").Source,
+                    AudioArtwork.LoadBundled("airpods-max-2").Source), "AirPods Pro and AirPods Max have distinct product silhouettes");
                 Check(AudioArtwork.LoadBundled("audio-unknown") == null, "Unknown products retain their generic fallback");
             }
             finally { AudioArtwork.Invalidate(); if (File.Exists(path)) File.Delete(path); }

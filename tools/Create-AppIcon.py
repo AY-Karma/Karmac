@@ -1,79 +1,64 @@
-﻿"""Build the original signal-K icon with Pillow, without fonts or downloads.
-SVG and raster masks share geometry. Every ICO size is rendered at 4x.
+"""Build Karmac's black-and-white icon with Pillow, without fonts or downloads.
+
+A K drawn as a single stroke: a vertical stem and two arms, with the upper arm
+ending in a round earbud head. White on a black rounded tile. SVG and raster
+share the geometry below. Every ICO size is rendered at 4x and downsampled.
 """
 from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
-UPPER = ((82, 128), (129, 128), (137, 70), (181, 70))
-LOWER = ((82, 128), (129, 128), (137, 186), (181, 186))
-
-
-def gradient(size, first, last):
-    image = Image.new("RGBA", (size, size))
-    draw = ImageDraw.Draw(image)
-    for y in range(size):
-        mix = y / (size - 1)
-        color = tuple(round(a + (b-a)*mix) for a, b in zip(first, last))
-        draw.line((0, y, size, y), fill=color)
-    return image
+TILE = (8, 8, 248, 248)
+RADIUS = 56
+WIDTH = 30
+STEM = (72, 54, 102, 190)                 # left, top, right, bottom of the stem
+UPPER = ((102, 124), (162, 82))           # arm into the earbud head
+HEAD = (172, 76, 31)                      # earbud head: centre x, y, radius
+LOWER = ((106, 126), (172, 190))          # straight lower arm
 
 
 def render(size):
     pixels = size * 4
     scale = pixels / 256
+
     def box(values):
         return tuple(round(value * scale) for value in values)
-    def mask():
-        return Image.new("L", (pixels, pixels))
-    def ribbon(points):
-        shape = mask()
-        draw = ImageDraw.Draw(shape)
-        curve = []
-        for step in range(161):
-            t = step / 160
-            weights = ((1-t)**3, 3*(1-t)**2*t, 3*(1-t)*t*t, t**3)
-            curve.append(tuple(round(sum(w*p[axis] for w, p in zip(weights, points))*scale) for axis in (0, 1)))
-        draw.line(curve, fill=255, width=round(29*scale), joint="curve")
-        for x, y in (points[0], points[-1]):
-            draw.ellipse(box((x-14.5, y-14.5, x+14.5, y+14.5)), fill=255)
-        return shape
+
+    def line(draw, points):
+        (x1, y1), (x2, y2) = points
+        draw.line([(x1 * scale, y1 * scale), (x2 * scale, y2 * scale)], fill=(255, 255, 255, 255), width=round(WIDTH * scale))
+        for x, y in points:
+            r = WIDTH / 2
+            draw.ellipse(box((x - r, y - r, x + r, y + r)), fill=(255, 255, 255, 255))
 
     image = Image.new("RGBA", (pixels, pixels))
-    tile = mask()
-    ImageDraw.Draw(tile).rounded_rectangle(box((8, 8, 248, 248)), radius=round(55*scale), fill=255)
-    image.paste(gradient(pixels, (41, 52, 68), (9, 15, 24)), (0, 0), tile)
-    if size >= 32:
-        ImageDraw.Draw(image).rounded_rectangle(box((8.5, 8.5, 247.5, 247.5)), radius=round(55*scale),
-                                               outline=(103, 119, 139, 120), width=max(1, round(scale)))
-    # Warm lower branch sits behind the ivory upper branch and upright.
-    image.paste(gradient(pixels, (255, 199, 114), (244, 89, 61)), (0, 0), ribbon(LOWER))
-    image.paste(gradient(pixels, (255, 242, 211), (255, 163, 82)), (0, 0), ribbon(UPPER))
-    stem = mask()
-    ImageDraw.Draw(stem).rounded_rectangle(box((60, 55, 89, 201)), radius=round(14.5*scale), fill=255)
-    image.paste(gradient(pixels, (255, 249, 231), (255, 202, 130)), (0, 0), stem)
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle(box(TILE), radius=round(RADIUS * scale), fill=(0, 0, 0, 255))
+    # A hairline keeps the tile's edge visible on a black taskbar.
+    if size >= 24:
+        draw.rounded_rectangle(box((8.5, 8.5, 247.5, 247.5)), radius=round(RADIUS * scale),
+                               outline=(255, 255, 255, 46), width=max(1, round(1.5 * scale)))
+    draw.rounded_rectangle(box(STEM), radius=round(WIDTH / 2 * scale), fill=(255, 255, 255, 255))
+    line(draw, UPPER)
+    line(draw, LOWER)
+    x, y, r = HEAD
+    draw.ellipse(box((x - r, y - r, x + r, y + r)), fill=(255, 255, 255, 255))
     return image.resize((size, size), Image.Resampling.LANCZOS)
 
 
-def svg_path(points):
-    return "M{} {} C{} {},{} {},{} {}".format(*(coordinate for point in points for coordinate in point))
-
-
 def write_svg(path):
+    (ux1, uy1), (ux2, uy2) = UPPER
+    (lx1, ly1), (lx2, ly2) = LOWER
+    hx, hy, hr = HEAD
+    left, top, right, bottom = STEM
     path.write_text(f'''<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>Karmac</title>
-  <desc>An ivory and amber K with flowing signal branches on an ink-blue tile.</desc>
-  <defs>
-    <linearGradient id="tile" x2="0" y2="1"><stop stop-color="#293444"/><stop offset="1" stop-color="#090f18"/></linearGradient>
-    <linearGradient id="lower" x2="0" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#ffc772"/><stop offset="1" stop-color="#f4593d"/></linearGradient>
-    <linearGradient id="upper" x2="0" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#fff2d3"/><stop offset="1" stop-color="#ffa352"/></linearGradient>
-    <linearGradient id="stem" x2="0" y2="256" gradientUnits="userSpaceOnUse"><stop stop-color="#fff9e7"/><stop offset="1" stop-color="#ffca82"/></linearGradient>
-  </defs>
-  <rect x="8" y="8" width="240" height="240" rx="55" fill="url(#tile)" stroke="#67778b" stroke-opacity=".47"/>
-  <path d="{svg_path(LOWER)}" stroke="url(#lower)" stroke-width="29" stroke-linecap="round" fill="none"/>
-  <path d="{svg_path(UPPER)}" stroke="url(#upper)" stroke-width="29" stroke-linecap="round" fill="none"/>
-  <rect x="60" y="55" width="29" height="146" rx="14.5" fill="url(#stem)"/>
+  <desc>A white K whose upper arm ends in an earbud, on a black rounded tile.</desc>
+  <rect x="8" y="8" width="240" height="240" rx="{RADIUS}" fill="#000" stroke="#fff" stroke-opacity=".18" stroke-width="1.5"/>
+  <rect x="{left}" y="{top}" width="{right - left}" height="{bottom - top}" rx="{WIDTH / 2:g}" fill="#fff"/>
+  <path d="M{ux1} {uy1}L{ux2} {uy2}M{lx1} {ly1}L{lx2} {ly2}" stroke="#fff" stroke-width="{WIDTH}" stroke-linecap="round" fill="none"/>
+  <circle cx="{hx}" cy="{hy}" r="{hr}" fill="#fff"/>
 </svg>
 ''', encoding="utf-8")
 
@@ -86,4 +71,4 @@ if __name__ == "__main__":
     # DIB frames work with System.Drawing.Icon and the Windows shell.
     frames[-1].save(assets / "Karmac.ico", format="ICO", bitmap_format="bmp",
                     sizes=[(size, size) for size in SIZES], append_images=frames[:-1])
-    print("Created original SVG, 1024px PNG, and nine-size Windows ICO")
+    print("Created black-and-white SVG, 1024px PNG, and nine-size Windows ICO")

@@ -4,6 +4,6 @@ $PortableFiles = @(
     'PRIVACY.md', 'SECURITY.md', 'assets/NOTICE.txt', 'assets/Karmac.png', 'assets/headphones/README.md',
     'docs/compatibility.md', 'docs/licensing.md', 'docs/windows-trust.md', 'docs/metrics.md', 'docs/releasing.md',
     'docs/releases/1.0.0-preview.2.md', 'docs/branding.md', 'docs/public-readiness.md',
-    'docs/assets/app-overview.png', 'docs/assets/device-lineup.png',
+    'docs/assets/icon.png', 'docs/assets/app-overview.png',
     'docs/assets/connection-metrics.svg', 'docs/assets/connection-flow.svg'
 )

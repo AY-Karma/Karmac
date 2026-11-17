@@ -10,7 +10,6 @@ Requires x64 Windows 10/11, .NET Framework 4.8, working Bluetooth/audio drivers,
 | --- | --- |
 | AirPods Pro 3 | Physical reconnect/output checks and two observed Bluetooth-off cold connections on one laptop. Rotating BLE ownership remains unresolved in the tested portable setup. |
 | AirPods, other AirPods Pro, AirPods Max | Catalog identity, UI, artwork, and synthetic state checks. No physical connection-speed guarantee. |
-| Beats earbuds, headphones, and neckband/cabled wireless models | Catalog identity, UI, artwork, and synthetic state checks. No physical connection-speed guarantee. |
 
 The catalog contains 30 identifiers. A catalog label, render, or battery layout establishes recognition only; it is not manufacturer certification, proof of product specifications, or a hardware-tested support list. Family illustrations are approximate and shared between generations. See [artwork provenance](../assets/NOTICE.txt).
 

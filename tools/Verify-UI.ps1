@@ -14,7 +14,7 @@ $refs = @('System.dll','System.Core.dll','System.Xaml.dll','System.Drawing.dll',
     (Join-Path $metadata 'Windows.Storage.winmd'))
 $arguments = @('/nologo','/codepage:65001','/target:exe','/platform:x64','/warn:4',
     '/main:Karmac.Tests.UiSmoke','/out:artifacts\Karmac.UiSmoke.exe',
-    '/resource:src\MainWindow.xaml,MainWindow.xaml','/resource:THIRD-PARTY-NOTICES.txt,Notices.txt',
+    '/resource:src\Flyout.xaml,Flyout.xaml','/resource:src\Card.xaml,Card.xaml','/resource:src\Artwork.xaml,Artwork.xaml','/resource:THIRD-PARTY-NOTICES.txt,Notices.txt',
     '/resource:assets\airpods-pro-3-original.png,AirPodsPro3.png')
 if (Test-Path -LiteralPath 'assets\Karmac.ico') { $arguments += '/resource:assets\Karmac.ico,Karmac.ico' }
 $arguments += Get-ChildItem -LiteralPath assets\headphones -Filter '*.png' | ForEach-Object { '/resource:' + $_.FullName + ',Headphones.' + $_.Name }

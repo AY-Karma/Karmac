@@ -205,7 +205,7 @@ namespace Karmac
     {
         internal int TimeoutMs = 20000;          // normal hard deadline
         internal int TakeoverTimeoutMs = 30000;  // when another device holds the pair
-        internal int PollMs = 150;
+        internal int PollMs = 60;
         // While the link is down, wake attempts alternate between a driver request and an
         // SDP page, one at a time, each given a full page window before the next.
         internal int LinkDownRetryMs = 5000;

@@ -82,20 +82,6 @@ namespace Karmac
                     resource = "Headphones.airpods-pro.png"; break;
                 case "airpods-max-lightning": case "airpods-max-usbc": case "airpods-max-2":
                     resource = "Headphones.max.png"; break;
-                case "beats-studio-3": case "beats-studio-pro": case "beats-360":
-                    resource = "Headphones.studio.png"; break;
-                case "beats-solo-3": case "beats-solo-4": case "beats-solo-pro":
-                    resource = "Headphones.solo.png"; break;
-                case "beats-studio-buds": case "beats-studio-buds-plus": case "beats-solo-buds":
-                    resource = "Headphones.beats-buds.png"; break;
-                case "beats-fit-pro":
-                    resource = "Headphones.beats-fit-pro.png"; break;
-                case "powerbeats-pro": case "powerbeats-pro-2":
-                    resource = "Headphones.powerbeats-pro.png"; break;
-                case "beats-x": case "beats-flex":
-                    resource = "Headphones.beats-neckband.png"; break;
-                case "powerbeats-3": case "powerbeats-4":
-                    resource = "Headphones.powerbeats-cabled.png"; break;
                 default: return null;
             }
             return Bundled.GetOrAdd(resource, name => new Lazy<ArtworkImage>(() =>

@@ -19,7 +19,7 @@ $refs = @(
   (Join-Path $metadata 'Windows.Foundation.winmd'),
   (Join-Path $metadata 'Windows.Storage.winmd')
 )
-$arguments = @('/nologo', '/codepage:65001', '/target:winexe', '/platform:x64', '/optimize+', '/warn:4', '/win32manifest:app.manifest', '/out:artifacts\Karmac.exe', '/resource:src\MainWindow.xaml,MainWindow.xaml', '/resource:THIRD-PARTY-NOTICES.txt,Notices.txt')
+$arguments = @('/nologo', '/codepage:65001', '/target:winexe', '/platform:x64', '/optimize+', '/warn:4', '/win32manifest:app.manifest', '/out:artifacts\Karmac.exe', '/resource:src\Flyout.xaml,Flyout.xaml', '/resource:src\Card.xaml,Card.xaml', '/resource:src\Artwork.xaml,Artwork.xaml', '/resource:THIRD-PARTY-NOTICES.txt,Notices.txt')
 if (Test-Path -LiteralPath 'assets\Karmac.ico') { $arguments += '/win32icon:assets\Karmac.ico'; $arguments += '/resource:assets\Karmac.ico,Karmac.ico' }
 if (Test-Path -LiteralPath 'assets\airpods-pro-3-original.png') { $arguments += '/resource:assets\airpods-pro-3-original.png,AirPodsPro3.png' }
 $headphoneResources = Get-ChildItem -LiteralPath assets\headphones -Filter '*.png' | ForEach-Object { '/resource:' + $_.FullName + ',Headphones.' + $_.Name }
@@ -30,7 +30,7 @@ New-Item -ItemType Directory -Force -Path artifacts | Out-Null
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed.' }
 Copy-Item -LiteralPath 'Karmac.exe.config','THIRD-PARTY-NOTICES.txt','README.md','LICENSE' -Destination artifacts -Force
-$readmeImages = @('app-overview.png','device-lineup.png','connection-metrics.svg','connection-flow.svg')
+$readmeImages = @('icon.png','app-overview.png','connection-metrics.svg','connection-flow.svg')
 New-Item -ItemType Directory -Force -Path artifacts\docs\assets | Out-Null
 foreach ($readmeImage in $readmeImages) {
   Copy-Item -LiteralPath (Join-Path 'docs\assets' $readmeImage) -Destination artifacts\docs\assets -Force

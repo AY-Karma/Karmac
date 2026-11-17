@@ -936,12 +936,12 @@ namespace Karmac
             DateTime since, suppressed;
             var now = DateTime.UtcNow;
             if (!IsSupportedModel(authorized.Model) || !connectedSince.TryGetValue(authorized.ContainerId, out since) ||
-                now - since < TimeSpan.FromSeconds(8)) return null;
+                now - since < TimeSpan.FromSeconds(4)) return null;
             if (autoSuppressed.TryGetValue(authorized.ContainerId, out suppressed) && now < suppressed) return null;
             var sameModel = readings.Values.Where(r => r.Model == authorized.Model && now - r.Seen < TimeSpan.FromSeconds(20)).ToList();
             if (sameModel.Count != 1) return null;
             var only = sameModel[0];
-            if (only.Rssi < InferRssi || now - only.FirstSeen < TimeSpan.FromSeconds(5)) return null;
+            if (only.Rssi < InferRssi || now - only.FirstSeen < TimeSpan.FromSeconds(3)) return null;
             locks[authorized.ContainerId] = new SourceLock { Address = only.Address, TargetAddress = authorized.Address,
                 Model = only.Model, UserSelected = false };
             return only;

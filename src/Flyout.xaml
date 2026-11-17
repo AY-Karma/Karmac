@@ -1,0 +1,528 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:k="karmac"
+        Title="Karmac" Width="392" Height="780" WindowStyle="None" AllowsTransparency="True" Background="{x:Null}"
+        ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" FontFamily="Segoe UI Variable Text, Segoe UI"
+        Foreground="#FFFFFF" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+  <Window.Resources>
+    <QuinticEase x:Key="EaseOut" EasingMode="EaseOut" />
+    <SolidColorBrush x:Key="Tile" Color="#0EFFFFFF" />
+    <SolidColorBrush x:Key="TileEdge" Color="#0DFFFFFF" />
+    <SolidColorBrush x:Key="Secondary2" Color="#C7EBEBF5" />
+    <SolidColorBrush x:Key="Muted2" Color="#8CEBEBF5" />
+    <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+
+    <!-- Earbud and case glyphs, after Apple's own part icons: a tilted head with a
+         speaker mesh and an angled stem; the right bud mirrors the left. -->
+    <GeometryGroup x:Key="BudHead" FillRule="EvenOdd">
+      <EllipseGeometry Center="10,7.6" RadiusX="6.2" RadiusY="5" />
+      <EllipseGeometry Center="5.9,7.4" RadiusX="1.4" RadiusY="2" />
+    </GeometryGroup>
+    <DrawingImage x:Key="BudLeft"><DrawingImage.Drawing><DrawingGroup>
+      <GeometryDrawing Brush="#00000000"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,24,24" /></GeometryDrawing.Geometry></GeometryDrawing>
+      <DrawingGroup>
+        <DrawingGroup.Transform><RotateTransform Angle="-18" CenterX="12" CenterY="12" /></DrawingGroup.Transform>
+        <GeometryDrawing Brush="#FFFFFF" Geometry="{StaticResource BudHead}" />
+        <GeometryDrawing Brush="#FFFFFF"><GeometryDrawing.Geometry><RectangleGeometry Rect="11.6,8.2,3.8,14" RadiusX="1.9" RadiusY="1.9" /></GeometryDrawing.Geometry></GeometryDrawing>
+      </DrawingGroup>
+    </DrawingGroup></DrawingImage.Drawing></DrawingImage>
+    <DrawingImage x:Key="BudRight"><DrawingImage.Drawing><DrawingGroup>
+      <GeometryDrawing Brush="#00000000"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,24,24" /></GeometryDrawing.Geometry></GeometryDrawing>
+      <DrawingGroup>
+        <DrawingGroup.Transform><TransformGroup><RotateTransform Angle="-18" CenterX="12" CenterY="12" /><ScaleTransform ScaleX="-1" CenterX="12" /></TransformGroup></DrawingGroup.Transform>
+        <GeometryDrawing Brush="#FFFFFF" Geometry="{StaticResource BudHead}" />
+        <GeometryDrawing Brush="#FFFFFF"><GeometryDrawing.Geometry><RectangleGeometry Rect="11.6,8.2,3.8,14" RadiusX="1.9" RadiusY="1.9" /></GeometryDrawing.Geometry></GeometryDrawing>
+      </DrawingGroup>
+    </DrawingGroup></DrawingImage.Drawing></DrawingImage>
+    <DrawingImage x:Key="CaseGlyph"><DrawingImage.Drawing><DrawingGroup>
+      <GeometryDrawing Brush="#00000000"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,24,24" /></GeometryDrawing.Geometry></GeometryDrawing>
+      <GeometryDrawing><GeometryDrawing.Pen><Pen Brush="#FFFFFF" Thickness="1.8" /></GeometryDrawing.Pen>
+        <GeometryDrawing.Geometry><GeometryGroup><RectangleGeometry Rect="3,6,18,13.5" RadiusX="5" RadiusY="5" /><LineGeometry StartPoint="3.6,10.5" EndPoint="20.4,10.5" /></GeometryGroup></GeometryDrawing.Geometry></GeometryDrawing>
+      <GeometryDrawing Brush="#FFFFFF"><GeometryDrawing.Geometry><EllipseGeometry Center="12,15" RadiusX="1" RadiusY="1" /></GeometryDrawing.Geometry></GeometryDrawing>
+    </DrawingGroup></DrawingImage.Drawing></DrawingImage>
+    <Geometry x:Key="Bolt">M 13,2 L 4,14 H 11 L 10,22 L 19,10 H 12 Z</Geometry>
+
+    <Style TargetType="ToolTip">
+      <Setter Property="Foreground" Value="#FFFFFF" /><Setter Property="FontSize" Value="12" />
+      <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" /><Setter Property="HasDropShadow" Value="False" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToolTip">
+        <Border Background="#1C1C1E" BorderBrush="#1FFFFFFF" BorderThickness="1" CornerRadius="10" Padding="10,7" MaxWidth="300">
+          <ContentPresenter><ContentPresenter.Resources><Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style></ContentPresenter.Resources></ContentPresenter>
+        </Border>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+
+    <!-- Capsule action. White is the one primary; Ghost is glass. Press shrinks to 0.97. -->
+    <Style x:Key="Cta" TargetType="Button">
+      <Setter Property="Cursor" Value="Hand" /><Setter Property="FontSize" Value="13.5" /><Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Height" Value="40" /><Setter Property="Background" Value="#FFFFFF" /><Setter Property="Foreground" Value="#000000" />
+      <Setter Property="BorderBrush" Value="Transparent" /><Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid x:Name="Surface" RenderTransformOrigin="0.5,0.5">
+          <Grid.RenderTransform><ScaleTransform /></Grid.RenderTransform>
+          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="20" />
+          <Border x:Name="Veil" Background="#808080" CornerRadius="20" Opacity="0" />
+          <Border x:Name="Ring" BorderBrush="#0A84FF" BorderThickness="2" CornerRadius="25" Margin="-3" Opacity="0" />
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Veil" Property="Opacity" Value="0.14" /></Trigger>
+          <Trigger Property="IsPressed" Value="True">
+            <Setter TargetName="Veil" Property="Opacity" Value="0.24" />
+            <Trigger.EnterActions><BeginStoryboard><Storyboard>
+              <DoubleAnimation Storyboard.TargetName="Surface" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.97" Duration="0:0:0.1" EasingFunction="{StaticResource EaseOut}" />
+              <DoubleAnimation Storyboard.TargetName="Surface" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.97" Duration="0:0:0.1" EasingFunction="{StaticResource EaseOut}" />
+            </Storyboard></BeginStoryboard></Trigger.EnterActions>
+            <Trigger.ExitActions><BeginStoryboard><Storyboard>
+              <DoubleAnimation Storyboard.TargetName="Surface" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2" EasingFunction="{StaticResource EaseOut}" />
+              <DoubleAnimation Storyboard.TargetName="Surface" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2" EasingFunction="{StaticResource EaseOut}" />
+            </Storyboard></BeginStoryboard></Trigger.ExitActions>
+          </Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.45" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="Ghost" TargetType="Button" BasedOn="{StaticResource Cta}">
+      <Setter Property="Background" Value="#14FFFFFF" /><Setter Property="Foreground" Value="#FFFFFF" /><Setter Property="BorderBrush" Value="#14FFFFFF" />
+    </Style>
+
+    <Style x:Key="IconButton" TargetType="Button">
+      <Setter Property="Width" Value="34" /><Setter Property="Height" Value="34" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" /><Setter Property="FontSize" Value="14" />
+      <Setter Property="Foreground" Value="{StaticResource Secondary2}" /><Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent">
+          <Ellipse x:Name="Veil" Fill="#14FFFFFF" Opacity="0" />
+          <Ellipse x:Name="Ring" Stroke="#0A84FF" StrokeThickness="2" Opacity="0" />
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Veil" Property="Opacity" Value="1" /><Setter Property="Foreground" Value="#FFFFFF" /></Trigger>
+          <Trigger Property="Tag" Value="Active"><Setter TargetName="Veil" Property="Opacity" Value="1" /><Setter TargetName="Veil" Property="Fill" Value="#24FFFFFF" /><Setter Property="Foreground" Value="#FFFFFF" /></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Veil" Property="Fill" Value="#24FFFFFF" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+
+    <!-- A full-width row inside a grouped tile. -->
+    <Style x:Key="RowButton" TargetType="Button">
+      <Setter Property="Cursor" Value="Hand" /><Setter Property="FontSize" Value="13" /><Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="MinHeight" Value="44" /><Setter Property="Padding" Value="16,0" /><Setter Property="Tag" Value="&#xE76C;" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid Background="Transparent">
+          <Border x:Name="Veil" Background="#0FFFFFFF" Opacity="0" />
+          <Border x:Name="Ring" BorderBrush="#0A84FF" BorderThickness="2" Opacity="0" />
+          <Grid Margin="{TemplateBinding Padding}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ContentPresenter VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{TemplateBinding Tag}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource Muted2}" VerticalAlignment="Center" Margin="12,0,0,0" />
+          </Grid>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Veil" Property="Opacity" Value="1" /></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Veil" Property="Background" Value="#1AFFFFFF" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+
+    <!-- iOS switch: Motion slides the part named Thumb and fades TrackOn on change. -->
+    <ControlTemplate x:Key="SwitchVisual" TargetType="ToggleButton">
+      <Grid Width="46" Height="28" VerticalAlignment="Center" Background="Transparent">
+        <Border x:Name="Track" CornerRadius="14" Background="#5C787880" />
+        <Border x:Name="TrackOn" CornerRadius="14" Background="#30D158" Opacity="0" />
+        <Ellipse x:Name="Thumb" Width="24" Height="24" Fill="#FFFFFF" HorizontalAlignment="Left" Margin="2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+          <Ellipse.Effect><DropShadowEffect Color="#000000" Opacity="0.35" BlurRadius="6" ShadowDepth="1.5" Direction="270" /></Ellipse.Effect>
+          <Ellipse.RenderTransform><TransformGroup><ScaleTransform /><TranslateTransform /></TransformGroup></Ellipse.RenderTransform>
+        </Ellipse>
+        <Border x:Name="Ring" BorderBrush="#0A84FF" BorderThickness="2" CornerRadius="17" Margin="-3" Opacity="0" />
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsPressed" Value="True">
+          <Trigger.EnterActions><BeginStoryboard><Storyboard>
+            <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1.22" Duration="0:0:0.14" EasingFunction="{StaticResource EaseOut}" />
+          </Storyboard></BeginStoryboard></Trigger.EnterActions>
+          <Trigger.ExitActions><BeginStoryboard><Storyboard>
+            <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.24" EasingFunction="{StaticResource EaseOut}" />
+          </Storyboard></BeginStoryboard></Trigger.ExitActions>
+        </Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4" /></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate>
+    <Style x:Key="Switch" TargetType="ToggleButton">
+      <Setter Property="Cursor" Value="Hand" /><Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template" Value="{StaticResource SwitchVisual}" />
+    </Style>
+    <Style x:Key="SettingRow" TargetType="CheckBox">
+      <Setter Property="Cursor" Value="Hand" /><Setter Property="Foreground" Value="#FFFFFF" /><Setter Property="FontSize" Value="13" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+        <Grid Background="Transparent">
+          <Border x:Name="Veil" Background="#0AFFFFFF" Opacity="0" />
+          <Border x:Name="Ring" BorderBrush="#0A84FF" BorderThickness="2" Opacity="0" />
+          <Grid Margin="16,12,14,12">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <ContentPresenter VerticalAlignment="Center" Margin="0,0,14,0" />
+            <Grid Grid.Column="1" Width="46" Height="28" VerticalAlignment="Center">
+              <Border CornerRadius="14" Background="#5C787880" />
+              <Border x:Name="TrackOn" CornerRadius="14" Background="#30D158" Opacity="0" />
+              <Ellipse x:Name="Thumb" Width="24" Height="24" Fill="#FFFFFF" HorizontalAlignment="Left" Margin="2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                <Ellipse.Effect><DropShadowEffect Color="#000000" Opacity="0.35" BlurRadius="6" ShadowDepth="1.5" Direction="270" /></Ellipse.Effect>
+                <Ellipse.RenderTransform><TransformGroup><ScaleTransform /><TranslateTransform /></TransformGroup></Ellipse.RenderTransform>
+              </Ellipse>
+            </Grid>
+          </Grid>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Veil" Property="Opacity" Value="1" /></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Opacity" Value="1" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="Hint" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11.5" /><Setter Property="Foreground" Value="{StaticResource Muted2}" /><Setter Property="Margin" Value="0,2,0,0" /><Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="Section" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{StaticResource Muted2}" /><Setter Property="Margin" Value="30,16,20,7" />
+    </Style>
+    <Style x:Key="TileBox" TargetType="Border">
+      <Setter Property="Background" Value="{StaticResource Tile}" /><Setter Property="BorderBrush" Value="{StaticResource TileEdge}" />
+      <Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="18" />
+    </Style>
+    <Style x:Key="Group" TargetType="Border" BasedOn="{StaticResource TileBox}">
+      <Setter Property="Margin" Value="14,0" /><Setter Property="ClipToBounds" Value="True" />
+    </Style>
+    <Style x:Key="Rule" TargetType="Border">
+      <Setter Property="Height" Value="1" /><Setter Property="Background" Value="#14FFFFFF" /><Setter Property="Margin" Value="16,0,0,0" />
+    </Style>
+    <Style x:Key="BatteryTile" TargetType="Border" BasedOn="{StaticResource TileBox}">
+      <Setter Property="Padding" Value="0,14,0,12" />
+    </Style>
+    <Style x:Key="Figure" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI" /><Setter Property="FontSize" Value="15" /><Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalAlignment" Value="Center" /><Setter Property="Margin" Value="0,7,0,0" /><Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+    <Style x:Key="Part" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" /><Setter Property="Foreground" Value="{StaticResource Muted2}" /><Setter Property="HorizontalAlignment" Value="Center" /><Setter Property="Margin" Value="0,1,0,0" />
+    </Style>
+    <Style x:Key="BoltBadge" TargetType="Grid">
+      <Setter Property="Width" Value="20" /><Setter Property="Height" Value="20" /><Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="VerticalAlignment" Value="Top" /><Setter Property="Margin" Value="0,-3,-3,0" /><Setter Property="Visibility" Value="Collapsed" />
+    </Style>
+
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
+        <Grid Background="Transparent"><Track x:Name="PART_Track" IsDirectionReversed="True">
+          <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#33FFFFFF" CornerRadius="2" Width="3" HorizontalAlignment="Center" /></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+        </Track></Grid>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Foreground" Value="#FFFFFF" /><Setter Property="Padding" Value="8,7,12,7" /><Setter Property="Cursor" Value="Hand" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="AutomationProperties.HelpText" Value="{Binding ModelName}" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem">
+        <Border x:Name="Row" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="12" Margin="0,1">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <Border Width="34" Height="34" CornerRadius="10" Background="#14FFFFFF" Margin="0,0,11,0">
+              <Image Source="{StaticResource BudLeft}" Width="20" Height="20" />
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{Binding ModelName}" FontSize="11.5" Foreground="{StaticResource Muted2}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+            </StackPanel>
+            <Grid x:Name="Check" Grid.Column="2" Width="18" Height="18" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+              <Ellipse Fill="#30D158" />
+              <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="9" Foreground="#000000" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+          </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsSelected" Value="True"><Setter TargetName="Check" Property="Visibility" Value="Visible" /><Setter TargetName="Row" Property="Background" Value="#0FFFFFFF" /></Trigger>
+          <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Row" Property="Background" Value="#1AFFFFFF" /></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="FontSize" Value="18" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" /><Setter Property="Cursor" Value="Hand" /><Setter Property="MaxDropDownHeight" Value="240" />
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+        <Grid>
+          <ToggleButton Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+            <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="Transparent" /></ControlTemplate></ToggleButton.Template>
+          </ToggleButton>
+          <Grid IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock x:Name="SelectedName" Text="{Binding SelectedItem.Name, RelativeSource={RelativeSource TemplatedParent}}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="Placeholder" Text="Your AirPods" Foreground="{StaticResource Muted2}" TextWrapping="NoWrap" Visibility="Collapsed" />
+            <Grid Grid.Column="1" Width="20" Height="20" Margin="8,1,0,0" VerticalAlignment="Center">
+              <Ellipse x:Name="ChevronDisc" Fill="#1AFFFFFF" />
+              <TextBlock x:Name="Chevron" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="8" FontWeight="Normal" Foreground="#C7EBEBF5" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1,0,0" RenderTransformOrigin="0.5,0.5">
+                <TextBlock.RenderTransform><RotateTransform /></TextBlock.RenderTransform>
+              </TextBlock>
+            </Grid>
+          </Grid>
+          <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="None" HorizontalOffset="-12">
+            <Border x:Name="Drop" Background="#141414" BorderBrush="#24FFFFFF" BorderThickness="1" CornerRadius="18" MinWidth="280" Padding="6" Margin="8,6,8,24" RenderTransformOrigin="0.5,0">
+              <Border.RenderTransform><TransformGroup><ScaleTransform /><TranslateTransform /></TransformGroup></Border.RenderTransform>
+              <Border.Effect><DropShadowEffect Color="#000000" Opacity="0.6" BlurRadius="24" ShadowDepth="8" Direction="270" /></Border.Effect>
+              <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter /></ScrollViewer>
+            </Border>
+          </Popup>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="SelectedIndex" Value="-1"><Setter TargetName="Placeholder" Property="Visibility" Value="Visible" /></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chevron" Property="Foreground" Value="#FFFFFF" /><Setter TargetName="ChevronDisc" Property="Fill" Value="#2EFFFFFF" /></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.6" /></Trigger>
+          <Trigger Property="IsDropDownOpen" Value="True">
+            <Trigger.EnterActions><BeginStoryboard><Storyboard>
+              <DoubleAnimation Storyboard.TargetName="Chevron" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" To="180" Duration="0:0:0.2" EasingFunction="{StaticResource EaseOut}" />
+              <DoubleAnimation Storyboard.TargetName="Drop" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.15" FillBehavior="Stop" />
+              <DoubleAnimation Storyboard.TargetName="Drop" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" From="0.94" To="1" Duration="0:0:0.24" EasingFunction="{StaticResource EaseOut}" />
+              <DoubleAnimation Storyboard.TargetName="Drop" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" From="-8" To="0" Duration="0:0:0.24" EasingFunction="{StaticResource EaseOut}" />
+            </Storyboard></BeginStoryboard></Trigger.EnterActions>
+            <Trigger.ExitActions><BeginStoryboard><Storyboard>
+              <DoubleAnimation Storyboard.TargetName="Chevron" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" To="0" Duration="0:0:0.16" EasingFunction="{StaticResource EaseOut}" />
+            </Storyboard></BeginStoryboard></Trigger.ExitActions>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Window.Resources>
+
+  <!-- The root clips at the taskbar edge so the sheet rises out of it. -->
+  <Grid x:Name="Root" ClipToBounds="True">
+    <Border x:Name="Sheet" Width="344" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,16,12" Background="#000000" CornerRadius="22" BorderThickness="1">
+      <Border.BorderBrush>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#2EFFFFFF" Offset="0" /><GradientStop Color="#14FFFFFF" Offset="0.4" /><GradientStop Color="#12FFFFFF" Offset="1" /></LinearGradientBrush>
+      </Border.BorderBrush>
+      <Border.Effect><DropShadowEffect Color="#000000" Opacity="0.75" BlurRadius="40" ShadowDepth="14" Direction="270" /></Border.Effect>
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <Grid x:Name="PageHost" ClipToBounds="True">
+
+          <StackPanel x:Name="HomePage">
+            <!-- Stage: the product under a soft spotlight, resting on a pool of light. -->
+            <Grid x:Name="Hero" Height="196" ClipToBounds="True">
+              <Grid.Background>
+                <RadialGradientBrush Center="0.5,0" GradientOrigin="0.5,0" RadiusX="0.7" RadiusY="0.8">
+                  <GradientStop Color="#21FFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="1" />
+                </RadialGradientBrush>
+              </Grid.Background>
+              <Ellipse Width="210" Height="22" VerticalAlignment="Bottom" Margin="0,0,0,18" IsHitTestVisible="False">
+                <Ellipse.Fill><RadialGradientBrush><GradientStop Color="#24FFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="1" /></RadialGradientBrush></Ellipse.Fill>
+              </Ellipse>
+              <Image x:Name="DeviceArtwork" Height="164" MaxWidth="250" VerticalAlignment="Bottom" Margin="0,0,0,16" AutomationProperties.Name="Your AirPods">
+                <Image.Effect><DropShadowEffect Color="#000000" Opacity="0.55" BlurRadius="24" ShadowDepth="14" Direction="270" /></Image.Effect>
+              </Image>
+            </Grid>
+
+            <Grid Margin="18,6,16,0">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <ComboBox x:Name="DevicePicker" AutomationProperties.Name="Your paired AirPods" />
+              <ToggleButton x:Name="ConnectionToggle" Grid.Column="1" Style="{StaticResource Switch}" Margin="12,0,0,0" AutomationProperties.Name="AirPods connection" />
+            </Grid>
+            <TextBlock x:Name="StatusLine" Text="Finding your AirPods…" FontSize="12" Foreground="{StaticResource Muted2}" Margin="18,2,18,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+
+            <!-- Battery: three tiles, each ring framing the part it measures. -->
+            <Grid x:Name="BatteryRow" Margin="14,18,14,0">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Border x:Name="LeftCell" Style="{StaticResource BatteryTile}">
+                <StackPanel HorizontalAlignment="Center">
+                  <Grid Width="58" Height="58">
+                    <k:RingGauge x:Name="LeftRing" StrokeWidth="5" ShowLabel="False" Track="#1FFFFFFF" Fill="#FFFFFF" Ink="#FFFFFF" />
+                    <Image x:Name="LeftGlyph" Source="{StaticResource BudLeft}" Width="26" Height="26" />
+                    <Grid x:Name="LeftBolt" Style="{StaticResource BoltBadge}">
+                      <Ellipse Fill="#30D158" Stroke="#000000" StrokeThickness="2.5" Margin="-2.5" />
+                      <Path Data="{StaticResource Bolt}" Fill="#000000" Stretch="Uniform" Width="9" Height="11" />
+                    </Grid>
+                  </Grid>
+                  <TextBlock x:Name="LeftPct" Text="—" Style="{StaticResource Figure}" />
+                  <TextBlock x:Name="LeftLabel" Text="Left" Style="{StaticResource Part}" />
+                </StackPanel>
+              </Border>
+              <Border x:Name="RightCell" Grid.Column="2" Style="{StaticResource BatteryTile}">
+                <StackPanel HorizontalAlignment="Center">
+                  <Grid Width="58" Height="58">
+                    <k:RingGauge x:Name="RightRing" StrokeWidth="5" ShowLabel="False" Track="#1FFFFFFF" Fill="#FFFFFF" Ink="#FFFFFF" />
+                    <Image Source="{StaticResource BudRight}" Width="26" Height="26" />
+                    <Grid x:Name="RightBolt" Style="{StaticResource BoltBadge}">
+                      <Ellipse Fill="#30D158" Stroke="#000000" StrokeThickness="2.5" Margin="-2.5" />
+                      <Path Data="{StaticResource Bolt}" Fill="#000000" Stretch="Uniform" Width="9" Height="11" />
+                    </Grid>
+                  </Grid>
+                  <TextBlock x:Name="RightPct" Text="—" Style="{StaticResource Figure}" />
+                  <TextBlock Text="Right" Style="{StaticResource Part}" />
+                </StackPanel>
+              </Border>
+              <Border x:Name="CaseCell" Grid.Column="4" Style="{StaticResource BatteryTile}">
+                <StackPanel HorizontalAlignment="Center">
+                  <Grid Width="58" Height="58">
+                    <k:RingGauge x:Name="CaseRing" StrokeWidth="5" ShowLabel="False" Track="#1FFFFFFF" Fill="#FFFFFF" Ink="#FFFFFF" />
+                    <Image Source="{StaticResource CaseGlyph}" Width="26" Height="26" />
+                    <Grid x:Name="CaseBolt" Style="{StaticResource BoltBadge}">
+                      <Ellipse Fill="#30D158" Stroke="#000000" StrokeThickness="2.5" Margin="-2.5" />
+                      <Path Data="{StaticResource Bolt}" Fill="#000000" Stretch="Uniform" Width="9" Height="11" />
+                    </Grid>
+                  </Grid>
+                  <TextBlock x:Name="CasePct" Text="—" Style="{StaticResource Figure}" />
+                  <TextBlock Text="Case" Style="{StaticResource Part}" />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <!-- Honest empty state: no placeholder gauges, just what will happen. -->
+            <Border x:Name="NoBattery" Style="{StaticResource TileBox}" Margin="14,18,14,0" Padding="16,14" Visibility="Collapsed">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Opacity="0.4" VerticalAlignment="Center" Margin="0,0,14,0">
+                  <Image Source="{StaticResource BudLeft}" Width="22" Height="22" />
+                  <Image Source="{StaticResource BudRight}" Width="22" Height="22" Margin="2,0" />
+                  <Image Source="{StaticResource CaseGlyph}" Width="22" Height="22" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <TextBlock x:Name="NoBatteryTitle" Text="Battery shows when your AirPods share it" FontSize="12.5" Foreground="{StaticResource Secondary2}" />
+                  <TextBlock x:Name="NoBatteryHint" Text="Usually within a few seconds of use" FontSize="11.5" Foreground="{StaticResource Muted2}" Margin="0,1,0,0" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Connecting: the stage title, a segmented track and its labels. -->
+            <Border x:Name="ConnectionStream" Style="{StaticResource TileBox}" Margin="14,18,14,0" Padding="16,14" Visibility="Collapsed" AutomationProperties.LiveSetting="Polite">
+              <StackPanel>
+                <Grid>
+                  <TextBlock x:Name="ConnectionTitle" Text="Connecting" FontSize="13" FontWeight="SemiBold" Margin="0,0,56,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                  <TextBlock x:Name="ConnectionElapsed" Text="0.0 s" FontSize="12" Foreground="{StaticResource Muted2}" HorizontalAlignment="Right" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+                <ItemsControl x:Name="ConnectionSteps" Margin="0,11,0,7">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate>
+                    <Border x:Name="Seg" Height="4" CornerRadius="2" Margin="2,0" Background="#24FFFFFF" ClipToBounds="True" AutomationProperties.Name="{Binding Accessible}">
+                      <Border x:Name="Sheen" Width="44" HorizontalAlignment="Left" Opacity="0">
+                        <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#00FFFFFF" Offset="0" /><GradientStop Color="#FFFFFFFF" Offset="0.5" /><GradientStop Color="#00FFFFFF" Offset="1" /></LinearGradientBrush></Border.Background>
+                        <Border.RenderTransform><TranslateTransform X="-44" /></Border.RenderTransform>
+                      </Border>
+                    </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding State}" Value="Complete"><Setter TargetName="Seg" Property="Background" Value="#30D158" /></DataTrigger>
+                      <DataTrigger Binding="{Binding State}" Value="Failed"><Setter TargetName="Seg" Property="Background" Value="#FF453A" /></DataTrigger>
+                      <DataTrigger Binding="{Binding State}" Value="Skipped"><Setter TargetName="Seg" Property="Background" Value="#3DFFFFFF" /></DataTrigger>
+                      <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                        <Setter TargetName="Sheen" Property="Opacity" Value="1" />
+                        <DataTrigger.EnterActions><BeginStoryboard x:Name="Sweep"><Storyboard RepeatBehavior="Forever">
+                          <DoubleAnimation Storyboard.TargetName="Sheen" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="-44" To="96" Duration="0:0:1.1">
+                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut" /></DoubleAnimation.EasingFunction>
+                          </DoubleAnimation>
+                        </Storyboard></BeginStoryboard></DataTrigger.EnterActions>
+                        <DataTrigger.ExitActions><RemoveStoryboard BeginStoryboardName="Sweep" /></DataTrigger.ExitActions>
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl x:Name="ConnectionStepLabels">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate>
+                    <TextBlock x:Name="Label" Text="{Binding Title}" FontSize="10.5" Foreground="{StaticResource Muted2}" Margin="2,0" TextWrapping="Wrap" LineHeight="13" />
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding IsRunning}" Value="True"><Setter TargetName="Label" Property="Foreground" Value="#FFFFFF" /></DataTrigger>
+                      <DataTrigger Binding="{Binding State}" Value="Failed"><Setter TargetName="Label" Property="Foreground" Value="#FF453A" /></DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="ConnectionDetail" FontSize="11.5" Foreground="{StaticResource Muted2}" Margin="0,8,0,0" />
+              </StackPanel>
+            </Border>
+
+            <StackPanel x:Name="Actions" Margin="14,16,14,0">
+              <Button x:Name="PrimaryButton" Style="{StaticResource Cta}" Content="Connect" />
+              <Button x:Name="SecondaryButton" Style="{StaticResource Ghost}" Content="Cancel" Margin="0,8,0,0" Visibility="Collapsed" />
+            </StackPanel>
+            <Border Height="6" />
+          </StackPanel>
+
+          <!-- Settings slides in over Home. -->
+          <Grid x:Name="SettingsPage" Visibility="Collapsed">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <Grid Margin="10,10,16,0" Height="44">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Button x:Name="BackButton" Style="{StaticResource IconButton}" Content="&#xE72B;" FontSize="13" ToolTip="Back" AutomationProperties.Name="Back" />
+              <TextBlock Grid.Column="1" Text="Settings" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </Grid>
+            <ScrollViewer x:Name="SettingsScroll" Grid.Row="1" MaxHeight="560" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+              <StackPanel Margin="0,0,0,10">
+                <TextBlock Text="When you connect" Style="{StaticResource Section}" />
+                <Border Style="{StaticResource Group}">
+                  <StackPanel>
+                    <CheckBox x:Name="AutoRouteCheck" Style="{StaticResource SettingRow}" AutomationProperties.Name="Play through AirPods on connect">
+                      <StackPanel><TextBlock Text="Play through them" /><TextBlock Text="Make them the Windows output when you connect" Style="{StaticResource Hint}" /></StackPanel>
+                    </CheckBox>
+                    <Border Style="{StaticResource Rule}" />
+                    <CheckBox x:Name="SwitchWhenConnectedCheck" Style="{StaticResource SettingRow}" AutomationProperties.Name="Switch when they connect on their own">
+                      <StackPanel><TextBlock Text="Follow them automatically" /><TextBlock Text="Opening the case or a handoff from your phone moves audio here" Style="{StaticResource Hint}" /></StackPanel>
+                    </CheckBox>
+                  </StackPanel>
+                </Border>
+
+                <TextBlock Text="Karmac" Style="{StaticResource Section}" />
+                <Border Style="{StaticResource Group}">
+                  <StackPanel>
+                    <CheckBox x:Name="NotificationsCheck" Style="{StaticResource SettingRow}" AutomationProperties.Name="Connection card and alerts">
+                      <StackPanel><TextBlock Text="Connection card" /><TextBlock Text="Rises from the taskbar when they connect or the case opens" Style="{StaticResource Hint}" /></StackPanel>
+                    </CheckBox>
+                    <Border Style="{StaticResource Rule}" />
+                    <CheckBox x:Name="HotkeyCheck" Style="{StaticResource SettingRow}" AutomationProperties.Name="Keyboard shortcut">
+                      <StackPanel><TextBlock Text="Keyboard shortcut" /><TextBlock x:Name="ShortcutHint" Text="Ctrl + Alt + K connects or disconnects" Style="{StaticResource Hint}" /></StackPanel>
+                    </CheckBox>
+                  </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Group}" Margin="14,18,14,0">
+                  <StackPanel>
+                    <Button x:Name="PairButton" Style="{StaticResource RowButton}" Content="Pair new AirPods" Tag="&#xE8A7;" />
+                    <Border Style="{StaticResource Rule}" />
+                    <Button x:Name="LicenseButton" Style="{StaticResource RowButton}" Content="Open-source notices" />
+                    <Border Style="{StaticResource Rule}" />
+                    <Button x:Name="QuitButton" Style="{StaticResource RowButton}" Content="Quit Karmac" Tag="&#xE7E8;" />
+                  </StackPanel>
+                </Border>
+                <TextBlock x:Name="VersionLabel" Text="Karmac" FontSize="11" Foreground="{StaticResource Muted2}" HorizontalAlignment="Center" Margin="0,14,0,0" />
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Grid>
+
+        <Grid x:Name="Footer" Grid.Row="1" Margin="12,6,10,10" Height="38">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <Border x:Name="StatusChip" HorizontalAlignment="Left" VerticalAlignment="Center" Height="28" CornerRadius="14" Padding="10,0,12,0" Background="#14FFFFFF" BorderBrush="#14FFFFFF" BorderThickness="1" Margin="4,0,0,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Grid Width="12" Height="12" Margin="0,1,6,0" VerticalAlignment="Center">
+                <Ellipse x:Name="DotHalo" Fill="#30D158" Opacity="0.2" />
+                <Ellipse x:Name="ConnectionDot" Width="6" Height="6" Fill="#30D158" />
+              </Grid>
+              <TextBlock x:Name="ConnectionBadge" Text="Checking" FontSize="12" FontWeight="SemiBold" TextWrapping="NoWrap" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+          <Button x:Name="BluetoothButton" Grid.Column="1" Style="{StaticResource IconButton}" ToolTip="Bluetooth settings" AutomationProperties.Name="Open Bluetooth settings">
+            <Grid Width="16" Height="16">
+              <TextBlock Text="&#xE702;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Ellipse x:Name="RadioDot" Width="6" Height="6" Fill="#7A7A7A" Stroke="#000000" StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-1" />
+            </Grid>
+          </Button>
+          <Button x:Name="RefreshButton" Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE72C;" FontSize="13" ToolTip="Look for AirPods again" AutomationProperties.Name="Refresh devices" />
+          <Button x:Name="SettingsButton" Grid.Column="3" Style="{StaticResource IconButton}" Content="&#xE713;" ToolTip="Settings" AutomationProperties.Name="Settings" />
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
