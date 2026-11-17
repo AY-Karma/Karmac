@@ -66,6 +66,7 @@ namespace Karmac.Tests
             Run("Device battery readings retain container scope and freshness", DeviceBatteryScope);
             Run("Stale readings cannot match identity or appear nearby", StaleReadings);
             Run("Nearby candidates enforce the RSSI cutoff and sort by signal", NearbyCandidates);
+            Run("A connected pair matches the only nearby broadcast of its model, even when already in the ears", ConnectedPairBattery);
             Run("Empty caches and missing targets remain unknown", EmptyCache);
             Run("Windows native structure sizes and field offsets match x64 ABI", NativeAbi);
             Run("Bluetooth audio controllers require the native path prefix", BluetoothControllerIds);
@@ -734,6 +735,52 @@ namespace Karmac.Tests
                 Equal(2, candidates.Count, "Only signals at or above the nearby cutoff are offered");
                 Equal(close.Address, candidates[0].Address, "Strongest signal is listed first");
                 Equal(edge.Address, candidates[1].Address, "The exact RSSI cutoff is inclusive");
+            }
+        }
+
+        // A connected pair that was already in the ears when Karmac started: the earbuds are
+        // shadowed by the head (-60 to -75 dBm) and nothing "appeared" at connect time.
+        private static void ConnectedPairBattery()
+        {
+            BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            Action<BatteryMonitor, AudioTarget> connectLongAgo = (monitor, target) =>
+            {
+                monitor.RegisterTargets(new[] { target });
+                var since = (System.Collections.IDictionary)typeof(BatteryMonitor).GetField("connectedSince", flags).GetValue(monitor);
+                since[target.ContainerId] = DateTime.UtcNow.AddMinutes(-5);
+            };
+            foreach (short rssi in new short[] { -50, -72 })
+            {
+                AudioTarget target = Target("001122334455");
+                target.Endpoints.Add(new AudioEndpoint { Flow = 0, State = 1, ControllerId = @"{2}.\?th#x", Name = "Headphones" });
+                BatteryReading only = Beacon(0xAABBCCDDEEFF, rssi, 0); only.FirstSeen = DateTime.UtcNow.AddMinutes(-2);
+                using (BatteryMonitor monitor = Cache(only))
+                {
+                    typeof(BatteryMonitor).GetField("nextBatteryRefresh", flags).SetValue(monitor, DateTime.MaxValue);
+                    connectLongAgo(monitor, target);
+                    BatteryReading found = monitor.ForTarget(target);
+                    Assert(found != null && found.Address == only.Address && found.Inferred && !found.UserSelected,
+                        "The only same-model broadcast is matched and labelled as inferred at " + rssi + " dBm");
+                }
+            }
+            AudioTarget crowded = Target("001122334455");
+            crowded.Endpoints.Add(new AudioEndpoint { Flow = 0, State = 1, ControllerId = @"{2}.\?th#x", Name = "Headphones" });
+            BatteryReading mine = Beacon(0xAABBCCDDEEFF, -60, 0), neighbor = Beacon(0x112233445566, -75, 0);
+            mine.FirstSeen = neighbor.FirstSeen = DateTime.UtcNow.AddMinutes(-2);
+            using (BatteryMonitor monitor = Cache(mine, neighbor))
+            {
+                typeof(BatteryMonitor).GetField("nextBatteryRefresh", flags).SetValue(monitor, DateTime.MaxValue);
+                connectLongAgo(monitor, crowded);
+                Assert(monitor.ForTarget(crowded) == null, "Two broadcasts of the same model are ambiguous, so none is shown");
+            }
+            AudioTarget distant = Target("001122334455");
+            distant.Endpoints.Add(new AudioEndpoint { Flow = 0, State = 1, ControllerId = @"{2}.\?th#x", Name = "Headphones" });
+            BatteryReading far = Beacon(0xAABBCCDDEEFF, -92, 0); far.FirstSeen = DateTime.UtcNow.AddMinutes(-2);
+            using (BatteryMonitor monitor = Cache(far))
+            {
+                typeof(BatteryMonitor).GetField("nextBatteryRefresh", flags).SetValue(monitor, DateTime.MaxValue);
+                connectLongAgo(monitor, distant);
+                Assert(monitor.ForTarget(distant) == null, "A very weak broadcast is not matched");
             }
         }
 

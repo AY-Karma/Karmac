@@ -85,7 +85,6 @@ namespace Karmac
         public bool LeftInEar, RightInEar;
         public short Rssi;
         public DateTime Seen, FirstSeen;
-        public DateTime? WornSince;
         public string Source;
         public bool UserSelected;
         // Matched automatically by elimination rather than proven identity.
@@ -432,6 +431,8 @@ namespace Karmac
         internal const short NearbyRssiThreshold = -65;
         // "Right next to this PC": used for automatic matching and the case-open card.
         internal const short CloseRssi = -60;
+        // Weakest signal accepted for automatic matching of a connected pair.
+        internal const short InferRssi = -80;
         private readonly object gate = new object();
         private readonly Dictionary<ulong, BatteryReading> readings = new Dictionary<ulong, BatteryReading>();
         private readonly Dictionary<ulong, ResolvedIdentity> identities = new Dictionary<ulong, ResolvedIdentity>();
@@ -478,6 +479,7 @@ namespace Karmac
         // metadata associations and optional battery reads for those exact containers.
         internal void RegisterTargets(IList<AudioTarget> snapshot)
         {
+            Revive();
             List<AuthorizedTarget> connected;
             lock (gate)
             {
@@ -569,25 +571,58 @@ namespace Karmac
             }
         }
 
+        // Starts (or restarts) the Bluetooth LE listener. Safe to call at any time: with
+        // Bluetooth off the start fails, and a later call retries from scratch.
         internal void Start()
         {
+            lock (gate) { if (disposed) return; }
+            wanted = true;
             try
             {
                 if (watcher != null)
                 {
-                    if (watcher.Status == BluetoothLEAdvertisementWatcherStatus.Stopped ||
-                        watcher.Status == BluetoothLEAdvertisementWatcherStatus.Aborted) watcher.Start();
-                    if (watcher.Status == BluetoothLEAdvertisementWatcherStatus.Started) Status = "Listening for AirPods battery";
+                    var state = watcher.Status;
+                    if (state == BluetoothLEAdvertisementWatcherStatus.Started) { Status = "Listening for AirPods battery"; return; }
+                    // A watcher that never started (Created), or was stopped or aborted by
+                    // the radio going off, can be started again.
+                    if (state == BluetoothLEAdvertisementWatcherStatus.Created ||
+                        state == BluetoothLEAdvertisementWatcherStatus.Stopped ||
+                        state == BluetoothLEAdvertisementWatcherStatus.Aborted)
+                    {
+                        watcher.Start();
+                        Status = "Listening for AirPods battery";
+                    }
                     return;
                 }
-                watcher = new BluetoothLEAdvertisementWatcher { ScanningMode = BluetoothLEScanningMode.Passive };
-                watcher.AdvertisementFilter.Advertisement.ManufacturerData.Add(new BluetoothLEManufacturerData { CompanyId = 0x004C });
-                watcher.Received += Received;
-                watcher.Stopped += (sender, args) => { Status = "Battery listener stopped: " + args.Error; };
-                watcher.Start();
+                var created = new BluetoothLEAdvertisementWatcher { ScanningMode = BluetoothLEScanningMode.Passive };
+                created.AdvertisementFilter.Advertisement.ManufacturerData.Add(new BluetoothLEManufacturerData { CompanyId = 0x004C });
+                created.Received += Received;
+                created.Stopped += (sender, args) => { Status = "Battery listener stopped: " + args.Error; };
+                watcher = created;
+                created.Start();
                 Status = "Listening for AirPods battery";
             }
-            catch (Exception ex) { Status = "Battery listener unavailable"; Log.Write("BLE: " + ex.Message); }
+            catch (Exception ex)
+            {
+                Status = "Battery listener unavailable";
+                Log.Write("BLE: " + ex.Message);
+                // Drop the failed watcher so the next Start() builds a fresh one.
+                var failed = watcher; watcher = null;
+                if (failed != null) { try { failed.Received -= Received; } catch { } }
+            }
+        }
+
+        // Called whenever device state is refreshed: if the listener is not running (for
+        // example Bluetooth was off at launch), try again, at most every 10 seconds.
+        private DateTime nextRevive;
+        private bool wanted;
+        private void Revive()
+        {
+            if (!wanted) return;
+            if (watcher != null && watcher.Status == BluetoothLEAdvertisementWatcherStatus.Started) return;
+            if (DateTime.UtcNow < nextRevive) return;
+            nextRevive = DateTime.UtcNow.AddSeconds(10);
+            Start();
         }
 
         private void Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
@@ -624,8 +659,6 @@ namespace Karmac
                             BatteryReading previous;
                             appeared = !readings.TryGetValue(reading.Address, out previous) || !previous.Fresh;
                             reading.FirstSeen = appeared ? reading.Seen : previous.FirstSeen;
-                            // When the buds last went into an ear, for correlating with our own connection.
-                            reading.WornSince = !reading.Worn ? null : appeared || !previous.Worn ? (DateTime?)reading.Seen : previous.WornSince;
                             readings[reading.Address] = reading;
                             foreach (var address in readings.Where(p => DateTime.UtcNow - p.Value.Seen > TimeSpan.FromMinutes(3)).Select(p => p.Key).ToArray())
                             {
@@ -889,13 +922,15 @@ namespace Karmac
         }
         private static bool Close(int? a, int? b) { return !a.HasValue || !b.HasValue || Math.Abs(a.Value - b.Value) <= 10; }
 
-        // Called with the gate held. While our pair is playing stereo, accept a beacon
-        // automatically only when all of these hold:
-        //  - it's the one and only fresh beacon of that model in range at all,
-        //  - it's close and has been stable for a few seconds,
-        //  - its own behaviour lines up with our connection: it appeared (case opened) or
-        //    went into an ear within 10 s of our stereo audio starting.
-        // Signal strength alone never decides. Anything else stays a manual choice.
+        // Called with the gate held. While our pair is connected and playing, accept a
+        // beacon automatically when:
+        //  - it's the one and only fresh beacon of that model in range at all (a second
+        //    one of the same model makes it ambiguous, so nothing is shown),
+        //  - it has been heard steadily for a few seconds,
+        //  - it's reasonably close. Earbuds in your ears are shadowed by your head and
+        //    typically read -60 to -75 dBm, so the limit is deliberately loose.
+        // This is a match by elimination, not proof, so the display says so. Proven
+        // identity (exact address or a Windows match) always takes precedence.
         private BatteryReading InferSource(AuthorizedTarget authorized)
         {
             DateTime since, suppressed;
@@ -906,10 +941,7 @@ namespace Karmac
             var sameModel = readings.Values.Where(r => r.Model == authorized.Model && now - r.Seen < TimeSpan.FromSeconds(20)).ToList();
             if (sameModel.Count != 1) return null;
             var only = sameModel[0];
-            if (only.Rssi < CloseRssi || now - only.FirstSeen < TimeSpan.FromSeconds(5)) return null;
-            bool appearedTogether = Math.Abs((only.FirstSeen - since).TotalSeconds) <= 10;
-            bool wornTogether = only.WornSince.HasValue && Math.Abs((only.WornSince.Value - since).TotalSeconds) <= 10;
-            if (!appearedTogether && !wornTogether) return null;
+            if (only.Rssi < InferRssi || now - only.FirstSeen < TimeSpan.FromSeconds(5)) return null;
             locks[authorized.ContainerId] = new SourceLock { Address = only.Address, TargetAddress = authorized.Address,
                 Model = only.Model, UserSelected = false };
             return only;
